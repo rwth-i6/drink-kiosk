@@ -1,1 +1,7 @@
+# Kivy does not correctly set its dependencies?
+# These are required to install Kivy.
+cython
+pygame
+
 kivy
+better_exchook
