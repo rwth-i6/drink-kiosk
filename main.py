@@ -15,20 +15,27 @@ class KioskWidget(Widget):
     pass
 
 
-class KioskApp(App):
-    def build(self):
+class DrinkersListWidget(ScrollView):
+    def __init__(self, parent, **kwargs):
+        """
+        :param Widget parent:
+        """
+        super(DrinkersListWidget, self).__init__(size_hint=(1, None), size=(parent.width, parent.height), **kwargs)
         # https://kivy.org/doc/stable/api-kivy.uix.scrollview.html
+        # Window resize recursion error while using ScrollView? https://github.com/kivy/kivy/issues/5638
         layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
         # Make sure the height is such that there is something to scroll.
         layout.bind(minimum_height=layout.setter('height'))
         for i in range(20):
             btn = Button(text=str(i), size_hint_y=None, height=40)
             layout.add_widget(btn)
-        # Window resize recursion error while using ScrollView? https://github.com/kivy/kivy/issues/5638
-        root = ScrollView(size_hint=(1, None), size=(Window.width, Window.height))
-        root.add_widget(layout)
-        Window.bind(size=root.setter("size"))
-        return root
+        self.add_widget(layout)
+        parent.bind(size=self.setter("size"))
+
+
+class KioskApp(App):
+    def build(self):
+        return DrinkersListWidget(parent=Window)
 
 
 def main():
