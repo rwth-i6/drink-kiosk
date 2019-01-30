@@ -89,12 +89,12 @@ class Db:
         """
         :rtype: list[BuyItem]
         """
-        # Could be loaded from file...
-        return [
-            BuyItem("Wasser", "Wasser", "0.55"),
-            BuyItem("Cola", "Cola|Malz", "0.60"),
-            BuyItem("Mate", "Club Mate", "0.95"),
-            BuyItem("Kaffee", "Kaffee|etc", "0.24")]
+        fn = "%s/config/buy_items.txt" % self.path
+        s = open(fn).read()
+        buy_items = eval(s)
+        assert isinstance(buy_items, list)
+        assert all([isinstance(item, BuyItem) for item in buy_items])
+        return buy_items
 
     def get_drinker_names(self):
         """
