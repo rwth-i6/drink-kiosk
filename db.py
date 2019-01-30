@@ -4,7 +4,7 @@ import os
 from decimal import Decimal
 import subprocess
 from pprint import pprint
-from threading import Lock
+from threading import RLock
 from utils import better_repr
 
 
@@ -46,7 +46,7 @@ class Db:
         assert os.path.isdir(path)
         assert os.path.exists("%s/.git" % path), "not a Git dir?"
         self.path = path
-        self.lock = Lock()
+        self.lock = RLock()
         self.drinkers_list_fn = "%s/drinkers/list.txt" % path
         self.drinker_names = open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
@@ -128,13 +128,34 @@ class Db:
         :rtype: Drinker
         """
         print("%s drinks %s." % (drinker_name, item_name))
-        drinker = self.get_drinker(drinker_name)
-        item = self.get_buy_item_by_intern_name(item_name)
-        drinker.buy_item_counts.setdefault(item_name, 0)
-        drinker.buy_item_counts[item_name] += 1
-        drinker.credit_balance -= item.price
-        self.save_drinker(drinker)
-        return drinker
+        with self.lock:
+            drinker = self.get_drinker(drinker_name)
+            item = self.get_buy_item_by_intern_name(item_name)
+            drinker.buy_item_counts.setdefault(item_name, 0)
+            drinker.buy_item_counts[item_name] += 1
+            drinker.credit_balance -= item.price
+            self.save_drinker(drinker)
+            return drinker
+
+    def drinker_pay(self, drinker_name, amount):
+        """
+        This function would be called via RPC somehow.
+
+        :param str drinker_name:
+        :param Decimal|int|str amount:
+        :return: updated Drinker
+        :rtype: Drinker
+        """
+        amount = Decimal(amount)
+        print("%s pays %s %s." % (drinker_name, amount, self.currency))
+        with self.lock:
+            drinker = self.get_drinker(drinker_name)
+            drinker.credit_balance += amount
+            if drinker.credit_balance >= 0:
+                # Reset counts in this case.
+                drinker.buy_item_counts.clear()
+            self.save_drinker(drinker)
+            return drinker
 
     def save_all_drinkers(self):
         for name in self.get_drinker_names():
