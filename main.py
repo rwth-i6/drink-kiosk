@@ -15,11 +15,14 @@ def main():
     db = Db(path=args.db)
     if args.update_drinkers_list:
         print("Update drinkers list.")
-        db.update_drinkers_list()
+        db.update_drinkers_list(verbose=True)
         print("Quit.")
         return
 
-    # Kivy always parses
+    # Always update.
+    db.update_drinkers_list()
+
+    # Kivy always parses sys.argv.
     sys.argv = sys.argv[:1] + args.kivy_args
     # Do not globally import, as it has side effects.
     import kivy
