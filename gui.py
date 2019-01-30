@@ -48,7 +48,7 @@ class DrinkerWidget(BoxLayout):
             self.add_widget(button)
             self.drink_buttons[drink.intern_name] = button
         self.bind(size=Setter(self.rect, "size"), pos=Setter(self.rect, "pos"))
-        # Thread(target=self._load, daemon=True).start()
+        # in background? Thread(target=self._load, daemon=True).start()
         self._load()
 
     def _on_drink_button_click(self, intern_drink_name, button):
@@ -56,10 +56,15 @@ class DrinkerWidget(BoxLayout):
         :param str intern_drink_name:
         :param Button button:
         """
-        print("%s drinks %s." % (self.name, intern_drink_name))
+        updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=intern_drink_name)
+        self._load(updated_drinker)
 
-    def _load(self):
-        drinker = self.db.get_drinker(self.name)
+    def _load(self, drinker=None):
+        """
+        :param Drinker drinker:
+        """
+        if not drinker:
+            drinker = self.db.get_drinker(self.name)
         self.credit_balance_label.text = "%s %s" % (drinker.credit_balance, self.db.currency)
         drinks = self.db.get_buy_items_by_intern_name()
         for intern_drink_name, button in self.drink_buttons.items():

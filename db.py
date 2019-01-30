@@ -58,11 +58,11 @@ class Drinker:
     def __init__(self, name, credit_balance=0, buy_item_counts=None):
         """
         :param str name:
-        :param Decimal credit_balance:
+        :param Decimal|str|int credit_balance:
         :param dict[str,int] buy_item_counts:
         """
         self.name = name
-        self.credit_balance = credit_balance
+        self.credit_balance = Decimal(credit_balance)
         self.buy_item_counts = buy_item_counts or {}  # type: typing.Dict[str,int]
 
     def __repr__(self):
@@ -111,6 +111,13 @@ class Db:
         """
         return {item.intern_name: item for item in self.get_buy_items()}
 
+    def get_buy_item_by_intern_name(self, name):
+        """
+        :param str name:
+        :rtype: BuyItem
+        """
+        return self.get_buy_items_by_intern_name()[name]
+
     def _drinker_fn(self, drinker_name):
         """
         :param str drinker_name:
@@ -138,8 +145,29 @@ class Db:
         :param Drinker drinker:
         """
         drinker_fn = self._drinker_fn(drinker.name)
-        with open(drinker_fn, "f") as f:
+        with open(drinker_fn, "w") as f:
             f.write("%r\n" % drinker)
+
+    def drinker_buy_item(self, drinker_name, item_name):
+        """
+        :param str drinker_name:
+        :param str item_name: intern name
+        :return: updated Drinker
+        :rtype: Drinker
+        """
+        print("%s drinks %s." % (drinker_name, item_name))
+        drinker = self.get_drinker(drinker_name)
+        item = self.get_buy_item_by_intern_name(item_name)
+        drinker.buy_item_counts.setdefault(item_name, 0)
+        drinker.buy_item_counts[item_name] += 1
+        drinker.credit_balance -= item.price
+        self.save_drinker(drinker)
+        return drinker
+
+    def save_all_drinkers(self):
+        for name in self.get_drinker_names():
+            drinker = self.get_drinker(name)
+            self.save_drinker(drinker)
 
     def update_drinkers_list(self, verbose=False):
         """
