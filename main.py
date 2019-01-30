@@ -6,7 +6,17 @@ import sys
 from db import Db
 
 
+app = None
+db = None  # type: Db
+
+
+def reload():
+    db.reload()
+    app.reload()
+
+
 def main():
+    global app, db
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--db", required=True, help="path to database")
     arg_parser.add_argument("--update-drinkers-list", action="store_true")

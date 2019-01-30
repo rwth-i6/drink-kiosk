@@ -4,42 +4,8 @@ import os
 from decimal import Decimal
 import subprocess
 from pprint import pprint
-
-
-def better_repr(obj):
-    """
-    Replacement for `repr`, which is deterministic (e.g. sorted key order of dict),
-    and behaves also nicer for diffs, or visual representation.
-
-    :param object obj:
-    :rtype: str
-    """
-    if isinstance(obj, dict):
-        if len(obj) >= 5:  # multi-line?
-            # Also always end items with "," such that diff is nicer.
-            return "{\n%s}" % "".join(
-                ["%s: %s,\n" % (better_repr(key), better_repr(value)) for (key, value) in sorted(obj.items())])
-        return "{%s}" % ", ".join(
-            ["%s: %s" % (better_repr(key), better_repr(value)) for (key, value) in sorted(obj.items())])
-    if isinstance(obj, set):
-        if len(obj) >= 5:  # multi-line?
-            # Also always end items with "," such that diff is nicer.
-            return "{\n%s}" % "".join(["%s,\n" % better_repr(value) for value in sorted(obj)])
-        return "{%s}" % ", ".join([better_repr(value) for value in sorted(obj)])
-    if isinstance(obj, list):
-        if len(obj) >= 5:  # multi-line?
-            # Also always end items with "," such that diff is nicer.
-            return "[\n%s]" % "".join(["%s,\n" % better_repr(value) for value in obj])
-        return "[%s]" % ", ".join([better_repr(value) for value in obj])
-    if isinstance(obj, tuple):
-        if len(obj) >= 5:  # multi-line?
-            # Also always end items with "," such that diff is nicer.
-            return "(\n%s)" % "".join(["%s,\n" % better_repr(value) for value in obj])
-        if len(obj) == 1:
-            return "(%s,)" % better_repr(obj[0])
-        return "(%s)" % ", ".join([better_repr(value) for value in obj])
-    # Generic fallback.
-    return repr(obj)
+from threading import Lock
+from utils import better_repr
 
 
 class BuyItem:
@@ -80,6 +46,7 @@ class Db:
         assert os.path.isdir(path)
         assert os.path.exists("%s/.git" % path), "not a Git dir?"
         self.path = path
+        self.lock = Lock()
         self.drinkers_list_fn = "%s/drinkers/list.txt" % path
         self.drinker_names = open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
@@ -95,6 +62,9 @@ class Db:
         assert isinstance(buy_items, list)
         assert all([isinstance(item, BuyItem) for item in buy_items])
         return buy_items
+
+    def update_buy_items(self):
+        self.buy_items = self._load_buy_items()
 
     def get_drinker_names(self):
         """
@@ -131,13 +101,14 @@ class Db:
         :rtype: Drinker
         """
         drinker_fn = self._drinker_fn(name)
-        if os.path.exists(drinker_fn):
-            s = open(drinker_fn).read()
-            drinker = eval(s)
-            assert isinstance(drinker, Drinker)
-            assert drinker.name == name
-        else:
-            drinker = Drinker(name=name)
+        with self.lock:
+            if os.path.exists(drinker_fn):
+                s = open(drinker_fn).read()
+                drinker = eval(s)
+                assert isinstance(drinker, Drinker)
+                assert drinker.name == name
+            else:
+                drinker = Drinker(name=name)
         return drinker
 
     def save_drinker(self, drinker):
@@ -145,8 +116,9 @@ class Db:
         :param Drinker drinker:
         """
         drinker_fn = self._drinker_fn(drinker.name)
-        with open(drinker_fn, "w") as f:
-            f.write("%r\n" % drinker)
+        with self.lock:
+            with open(drinker_fn, "w") as f:
+                f.write("%r\n" % drinker)
 
     def drinker_buy_item(self, drinker_name, item_name):
         """
@@ -222,8 +194,14 @@ class Db:
                 assert key not in cur_entry, "line: %r" % line
                 cur_entry[key] = value
         print("Found %i users (potential drinkers)." % count)
-        with open(self.drinkers_list_fn, "w") as f:
-            for name in drinkers_list:
-                assert "\n" not in name
-                f.write("%s\n" % name)
+        with self.lock:
+            with open(self.drinkers_list_fn, "w") as f:
+                for name in drinkers_list:
+                    assert "\n" not in name
+                    f.write("%s\n" % name)
         self.drinker_names = drinkers_list
+
+    def reload(self):
+        self.update_drinkers_list()
+        self.save_all_drinkers()
+        self.update_buy_items()

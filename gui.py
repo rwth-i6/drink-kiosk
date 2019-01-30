@@ -109,3 +109,8 @@ class KioskApp(App):
 
     def on_start(self):
         pass
+
+    def reload(self):
+        widget = self.root
+        assert isinstance(widget, DrinkersListWidget)
+        widget.update()
