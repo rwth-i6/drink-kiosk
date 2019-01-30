@@ -4,6 +4,7 @@ import better_exchook
 import argparse
 import sys
 from db import Db
+from utils import init_ipython_kernel
 
 
 app = None
@@ -28,6 +29,9 @@ def main():
         db.update_drinkers_list(verbose=True)
         print("Quit.")
         return
+
+    # TODO fix this...
+    # init_ipython_kernel()
 
     # Always update.
     db.update_drinkers_list()
