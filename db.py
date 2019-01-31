@@ -21,18 +21,22 @@ class BuyItem:
 
 
 class Drinker:
-    def __init__(self, name, credit_balance=0, buy_item_counts=None):
+    def __init__(self, name, credit_balance=0, buy_item_counts=None, total_buy_item_counts=None):
         """
         :param str name:
         :param Decimal|str|int credit_balance:
         :param dict[str,int] buy_item_counts:
+        :param dict[str,int] total_buy_item_counts:
         """
         self.name = name
         self.credit_balance = Decimal(credit_balance)
         self.buy_item_counts = buy_item_counts or {}  # type: typing.Dict[str,int]
+        self.total_buy_item_counts = total_buy_item_counts or {}  # type: typing.Dict[str,int]
+        if self.buy_item_counts and not self.total_buy_item_counts:
+            self.total_buy_item_counts = self.buy_item_counts.copy()
 
     def __repr__(self):
-        attribs = ["name", "credit_balance", "buy_item_counts"]
+        attribs = ["name", "credit_balance", "buy_item_counts", "total_buy_item_counts"]
         return "%s(\n%s)" % (
             self.__class__.__name__,
             ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]))
@@ -133,6 +137,8 @@ class Db:
             item = self.get_buy_item_by_intern_name(item_name)
             drinker.buy_item_counts.setdefault(item_name, 0)
             drinker.buy_item_counts[item_name] += 1
+            drinker.total_buy_item_counts.setdefault(item_name, 0)
+            drinker.total_buy_item_counts[item_name] += 1
             drinker.credit_balance -= item.price
             self.save_drinker(drinker)
             return drinker
