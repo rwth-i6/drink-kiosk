@@ -10,8 +10,9 @@ from kivy.uix.label import Label
 # noinspection PyUnresolvedReferences
 from kivy.graphics import Color, Rectangle
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.popup import Popup
 from threading import Thread
-from db import Db
+from db import Db, BuyItem
 
 
 class Setter:
@@ -44,20 +45,31 @@ class DrinkerWidget(BoxLayout):
             # Add width=40, size_hint_x=None if fixed width.
             button = Button(text="%s ..." % drink.shown_name)
             button.bind(
-                on_release=lambda btn, _drink_name=drink.intern_name: self._on_drink_button_click(_drink_name, btn))
+                on_release=lambda btn, _drink=drink: self._on_drink_button_click(_drink, btn))
             self.add_widget(button)
             self.drink_buttons[drink.intern_name] = button
         self.bind(size=Setter(self.rect, "size"), pos=Setter(self.rect, "pos"))
         # in background? Thread(target=self._load, daemon=True).start()
         self._load()
 
-    def _on_drink_button_click(self, intern_drink_name, button):
+    def _on_drink_button_click(self, drink, button):
         """
-        :param str intern_drink_name:
+        :param BuyItem drink:
         :param Button button:
         """
-        updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=intern_drink_name)
-        self._load(updated_drinker)
+        popup = Popup(
+            title='Confirm: %s: Buy %s?' % (self.name, drink.shown_name),
+            content=Button(text='%s wants to drink %s for %s %s.' % (
+                self.name, drink.shown_name, drink.price, self.db.currency)),
+            size_hint=(0.7, 0.3))
+
+        def confirmed(*args):
+            popup.dismiss()
+            updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
+            self._load(updated_drinker)
+
+        popup.content.bind(on_press=confirmed)
+        popup.open()
 
     def _load(self, drinker=None):
         """
