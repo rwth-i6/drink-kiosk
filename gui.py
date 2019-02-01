@@ -43,7 +43,7 @@ class DrinkerWidget(BoxLayout):
         self.drink_buttons = {}  # type: typing.Dict[str,Button]  # by drink intern name
         for drink in self.db.get_buy_items():
             # Add width=40, size_hint_x=None if fixed width.
-            button = Button(text="%s ..." % drink.shown_name)
+            button = Button(text="%s ..." % drink.shown_name, font_size="12sp")
             button.bind(
                 on_release=lambda btn, _drink=drink: self._on_drink_button_click(_drink, btn))
             self.add_widget(button)
