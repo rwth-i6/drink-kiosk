@@ -5,3 +5,4 @@ pygame
 
 kivy
 better_exchook
+background_zmq_ipython

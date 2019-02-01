@@ -30,8 +30,7 @@ def main():
         print("Quit.")
         return
 
-    # TODO fix this...
-    # init_ipython_kernel()
+    init_ipython_kernel(user_ns={"db": db})
 
     # Always update.
     db.update_drinkers_list()
