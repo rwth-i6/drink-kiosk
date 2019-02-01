@@ -43,6 +43,7 @@ def main():
     kivy.require("1.10.0")
     from gui import KioskApp
     app = KioskApp(db=db)
+    db.update_drinker_callbacks.append(app.reload)
     app.run()
 
 

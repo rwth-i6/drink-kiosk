@@ -55,6 +55,7 @@ class Db:
         self.drinker_names = open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
         self.buy_items = self._load_buy_items()
+        self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
 
     def _load_buy_items(self):
         """
@@ -141,7 +142,9 @@ class Db:
             drinker.total_buy_item_counts[item_name] += 1
             drinker.credit_balance -= item.price
             self.save_drinker(drinker)
-            return drinker
+        for cb in self.update_drinker_callbacks:
+            cb(drinker_name)
+        return drinker
 
     def drinker_pay(self, drinker_name, amount):
         """
@@ -161,7 +164,9 @@ class Db:
                 # Reset counts in this case.
                 drinker.buy_item_counts.clear()
             self.save_drinker(drinker)
-            return drinker
+        for cb in self.update_drinker_callbacks:
+            cb(drinker_name)
+        return drinker
 
     def save_all_drinkers(self):
         for name in self.get_drinker_names():

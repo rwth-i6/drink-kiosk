@@ -84,6 +84,9 @@ class DrinkerWidget(BoxLayout):
             count = drinker.buy_item_counts.get(intern_drink_name, 0)
             button.text = "%s (%s %s): %i" % (drink.shown_name, drink.price, self.db.currency, count)
 
+    def update(self):
+        self._load()
+
 
 class DrinkersListWidget(ScrollView):
     def __init__(self, db, **kwargs):
@@ -100,12 +103,23 @@ class DrinkersListWidget(ScrollView):
         # Make sure the height is such that there is something to scroll.
         self.layout.bind(minimum_height=self.layout.setter('height'))
         self.add_widget(self.layout)
-        self.update()
+        self.update_all()
 
-    def update(self):
+    def update_all(self):
         self.layout.clear_widgets()
         for drinker_name in sorted(self.db.get_drinker_names()):
             self.layout.add_widget(DrinkerWidget(db=self.db, name=drinker_name, size_hint_y=None, height=30))
+
+    def update_drinker(self, drinker_name):
+        """
+        :param str drinker_name:
+        """
+        for widget in self.layout.children:
+            assert isinstance(widget, DrinkerWidget)
+            if widget.name == drinker_name:
+                widget.update()
+                return
+        raise Exception("Unknown drinker: %r" % (drinker_name,))
 
 
 class KioskApp(App):
@@ -122,7 +136,13 @@ class KioskApp(App):
     def on_start(self):
         pass
 
-    def reload(self):
+    def reload(self, drinker_name=None):
+        """
+        :param str|None drinker_name:
+        """
         widget = self.root
         assert isinstance(widget, DrinkersListWidget)
-        widget.update()
+        if drinker_name:
+            widget.update_drinker(drinker_name=drinker_name)
+        else:
+            widget.update_all()
