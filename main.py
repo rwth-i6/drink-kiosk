@@ -34,7 +34,6 @@ def main():
 
     # Always update.
     db.update_drinkers_list()
-    db.save_all_drinkers()
 
     # Kivy always parses sys.argv.
     sys.argv = sys.argv[:1] + args.kivy_args

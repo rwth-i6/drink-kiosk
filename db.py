@@ -55,23 +55,28 @@ class Task(Thread):
 
 
 class GitCommitDrinkersTask(Task):
-    def __init__(self, commit_files, commit_msg, **kwargs):
+    def __init__(self, commit_files, commit_msg, wait_time=None, **kwargs):
         """
         :param list[str] commit_files:
         :param str commit_msg:
+        :param float|None wait_time:
         """
         super(GitCommitDrinkersTask, self).__init__(**kwargs)
         self.commit_files = commit_files
         self.commit_msg = commit_msg
         self.creation_time = time.time()
+        self.wait_time = wait_time
 
     def run(self):
-        time.sleep(10)  # TODO change this ...
+        if self.wait_time:
+            time.sleep(self.wait_time)
         with self.db.lock:
             try:
                 cmd = ["git", "commit"] + self.commit_files + ["-m", self.commit_msg]
                 print("$ %s" % " ".join(cmd))
                 subprocess.check_call(cmd, cwd=self.db.path)
+            except subprocess.CalledProcessError as exc:
+                print("CalledProcessError:", exc)
             except Exception:
                 better_exchook.better_exchook(*sys.exc_info())
             finally:
@@ -96,6 +101,7 @@ class Db:
         self.drinkers_list_fn = "%s/drinkers/list.txt" % path
         self.drinker_names = open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
+        self.default_git_commit_wait_time = 10  # TODO change this...
         self.buy_items = self._load_buy_items()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
         self.tasks = []  # type: typing.List[Task]
@@ -213,9 +219,12 @@ class Db:
         return drinker
 
     def save_all_drinkers(self):
-        for name in self.get_drinker_names():
-            drinker = self.get_drinker(name)
-            self.save_drinker(drinker)
+        with self.lock:
+            # First add Git commit task, such that wait time is 0.
+            self.add_git_commit_task(wait_time=0)
+            for name in self.get_drinker_names():
+                drinker = self.get_drinker(name)
+                self.save_drinker(drinker)
 
     def update_drinkers_list(self, verbose=False):
         """
@@ -270,16 +279,16 @@ class Db:
                 assert key not in cur_entry, "line: %r" % line
                 cur_entry[key] = value
         print("Found %i users (potential drinkers)." % count)
+        self.drinker_names = drinkers_list
         with self.lock:
             with open(self.drinkers_list_fn, "w") as f:
                 for name in drinkers_list:
                     assert "\n" not in name
                     f.write("%s\n" % name)
-        self.drinker_names = drinkers_list
+            self.save_all_drinkers()
 
     def reload(self):
         self.update_drinkers_list()
-        self.save_all_drinkers()
         self.update_buy_items()
 
     def add_task(self, task):
@@ -293,6 +302,12 @@ class Db:
             self.tasks.append(task)
             task.start()
 
-    def add_git_commit_task(self):
+    def add_git_commit_task(self, wait_time=None):
+        """
+        :param float|None wait_time:
+        """
+        if wait_time is None:
+            wait_time = self.default_git_commit_wait_time
         self.add_task(GitCommitDrinkersTask(
-            db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update"))
+            db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
+            wait_time=wait_time))
