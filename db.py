@@ -1,11 +1,14 @@
 
 import typing
+import sys
 import os
 from decimal import Decimal
 import subprocess
 from pprint import pprint
-from threading import RLock
+from threading import RLock, Thread
 from utils import better_repr
+import better_exchook
+import time
 
 
 class BuyItem:
@@ -42,6 +45,45 @@ class Drinker:
             ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]))
 
 
+class Task(Thread):
+    def __init__(self, db, **kwargs):
+        """
+        :param Db db:
+        """
+        super(Task, self).__init__(**kwargs)
+        self.db = db
+
+
+class GitCommitDrinkersTask(Task):
+    def __init__(self, commit_files, commit_msg, **kwargs):
+        """
+        :param list[str] commit_files:
+        :param str commit_msg:
+        """
+        super(GitCommitDrinkersTask, self).__init__(**kwargs)
+        self.commit_files = commit_files
+        self.commit_msg = commit_msg
+        self.creation_time = time.time()
+
+    def run(self):
+        time.sleep(10)  # TODO change this ...
+        with self.db.lock:
+            try:
+                cmd = ["git", "commit"] + self.commit_files + ["-m", self.commit_msg]
+                print("$ %s" % " ".join(cmd))
+                subprocess.check_call(cmd, cwd=self.db.path)
+            except Exception:
+                better_exchook.better_exchook(*sys.exc_info())
+            finally:
+                self.db.tasks.remove(self)
+
+    def __eq__(self, other):
+        return isinstance(other, GitCommitDrinkersTask)
+
+    def __repr__(self):
+        return "<%s, delayed time %.1f>" % (self.__class__.__name__, time.time() - self.creation_time)
+
+
 class Db:
     def __init__(self, path):
         """
@@ -56,6 +98,7 @@ class Db:
         self.currency = "€"
         self.buy_items = self._load_buy_items()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
+        self.tasks = []  # type: typing.List[Task]
 
     def _load_buy_items(self):
         """
@@ -124,6 +167,7 @@ class Db:
         with self.lock:
             with open(drinker_fn, "w") as f:
                 f.write("%r\n" % drinker)
+            self.add_git_commit_task()
 
     def drinker_buy_item(self, drinker_name, item_name):
         """
@@ -237,3 +281,18 @@ class Db:
         self.update_drinkers_list()
         self.save_all_drinkers()
         self.update_buy_items()
+
+    def add_task(self, task):
+        """
+        :param Task task:
+        """
+        with self.lock:
+            if task in self.tasks:
+                print("Task already exists:", task)
+                return
+            self.tasks.append(task)
+            task.start()
+
+    def add_git_commit_task(self):
+        self.add_task(GitCommitDrinkersTask(
+            db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update"))
