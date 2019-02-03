@@ -13,6 +13,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
 from threading import Thread
 from db import Db, BuyItem
+from kivy.clock import Clock, mainthread
 
 
 class Setter:
@@ -71,6 +72,7 @@ class DrinkerWidget(BoxLayout):
         popup.content.bind(on_press=confirmed)
         popup.open()
 
+    @mainthread
     def _load(self, drinker=None):
         """
         :param Drinker drinker:
@@ -84,6 +86,7 @@ class DrinkerWidget(BoxLayout):
             count = drinker.buy_item_counts.get(intern_drink_name, 0)
             button.text = "%s (%s %s): %i" % (drink.shown_name, drink.price, self.db.currency, count)
 
+    @mainthread
     def update(self):
         self._load()
 
@@ -105,11 +108,13 @@ class DrinkersListWidget(ScrollView):
         self.add_widget(self.layout)
         self.update_all()
 
+    @mainthread
     def update_all(self):
         self.layout.clear_widgets()
         for drinker_name in sorted(self.db.get_drinker_names()):
             self.layout.add_widget(DrinkerWidget(db=self.db, name=drinker_name, size_hint_y=None, height=30))
 
+    @mainthread
     def update_drinker(self, drinker_name):
         """
         :param str drinker_name:
@@ -136,6 +141,7 @@ class KioskApp(App):
     def on_start(self):
         pass
 
+    @mainthread
     def reload(self, drinker_name=None):
         """
         :param str|None drinker_name:
