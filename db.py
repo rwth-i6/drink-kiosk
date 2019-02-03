@@ -51,10 +51,10 @@ class Task(Thread):
         :param Db db:
         :param float|None wait_time:
         """
-        super(Task, self).__init__(**kwargs)
-        self.db = db
         self.creation_time = time.time()
+        self.db = db
         self.wait_time = wait_time
+        super(Task, self).__init__(**kwargs)
         self.condition = Condition()
 
     def run(self):
@@ -80,6 +80,12 @@ class Task(Thread):
     def __repr__(self):
         return "<%s, delayed time %.1f>" % (self.__class__.__name__, time.time() - self.creation_time)
 
+    def __hash__(self):
+        return hash(id(self))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__)
+
 
 class GitCommitDrinkersTask(Task):
     def __init__(self, commit_files, commit_msg, **kwargs):
@@ -98,9 +104,6 @@ class GitCommitDrinkersTask(Task):
             subprocess.check_call(cmd, cwd=self.db.path)
         except subprocess.CalledProcessError as exc:
             print("Git commit error:", exc)
-
-    def __eq__(self, other):
-        return isinstance(other, GitCommitDrinkersTask)
 
 
 class Db:
