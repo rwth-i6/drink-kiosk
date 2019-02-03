@@ -30,7 +30,7 @@ def main():
         print("Quit.")
         return
 
-    init_ipython_kernel(user_ns={"db": db})
+    init_ipython_kernel(user_ns={"db": db, "app": app, "reload": reload})
 
     # Always update.
     db.update_drinkers_list()
