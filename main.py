@@ -12,6 +12,9 @@ db = None  # type: Db
 
 
 def reload():
+    """
+    Full reload of the DB, and then also the GUI.
+    """
     db.reload()
     app.reload()
 
@@ -30,8 +33,6 @@ def main():
         print("Quit.")
         return
 
-    init_ipython_kernel(user_ns={"db": db, "app": app, "reload": reload})
-
     # Always update.
     db.update_drinkers_list()
 
@@ -43,6 +44,7 @@ def main():
     from gui import KioskApp
     app = KioskApp(db=db)
     db.update_drinker_callbacks.append(app.reload)
+    init_ipython_kernel(user_ns={"db": db, "app": app, "reload": reload})
     app.run()
 
 
