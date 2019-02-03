@@ -46,18 +46,16 @@ class Drinker:
 
 
 class Task(Thread):
-    def __init__(self, db, wait_time=None, verbose_existing=True, **kwargs):
+    def __init__(self, db, wait_time=None, **kwargs):
         """
         :param Db db:
         :param float|None wait_time:
-        :param bool verbose_existing:
         """
         super(Task, self).__init__(**kwargs)
         self.db = db
         self.creation_time = time.time()
         self.wait_time = wait_time
         self.condition = Condition()
-        self.verbose_existing = verbose_existing
 
     def run(self):
         with self.condition:
@@ -230,7 +228,7 @@ class Db:
                 # Reset counts in this case.
                 drinker.buy_item_counts.clear()
             # We want to have a Git commit right after (after the lock release), so enforce this now.
-            self.add_git_commit_task(wait_time=0, verbose_existing=False)
+            self.add_git_commit_task(wait_time=0)
             self.save_drinker(drinker)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
@@ -239,7 +237,7 @@ class Db:
     def save_all_drinkers(self):
         with self.lock:
             # First add Git commit task, such that wait time is 0.
-            self.add_git_commit_task(wait_time=0, verbose_existing=False)
+            self.add_git_commit_task(wait_time=0)
             for name in self.get_drinker_names():
                 drinker = self.get_drinker(name)
                 self.save_drinker(drinker)
@@ -317,7 +315,7 @@ class Db:
             if task in self.tasks:
                 idx = self.tasks.index(task)
                 existing_task = self.tasks[idx]
-                if existing_task.verbose_existing:
+                if existing_task.wait_time:  # keep silent if there is no wait time on it
                     print("Task already exists:", existing_task)
                 if existing_task.wait_time and not task.wait_time:
                     print("Requested to skip wait time of task:", existing_task)
@@ -326,13 +324,12 @@ class Db:
             self.tasks.append(task)
             task.start()
 
-    def add_git_commit_task(self, wait_time=None, verbose_existing=True):
+    def add_git_commit_task(self, wait_time=None):
         """
         :param float|None wait_time:
-        :param bool verbose_existing:
         """
         if wait_time is None:
             wait_time = self.default_git_commit_wait_time
         self.add_task(GitCommitDrinkersTask(
             db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
-            wait_time=wait_time, verbose_existing=verbose_existing))
+            wait_time=wait_time))
