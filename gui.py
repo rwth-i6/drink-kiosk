@@ -112,19 +112,19 @@ class DrinkerWidget(BoxLayout):
         class Handlers:
             confirmed = False
 
-            def on_confirmed(sself, *args):
-                updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
-                self._load(updated_drinker)
-                sself.confirmed = True
-                popup.dismiss()
+        def on_confirmed(*args):
+            print("GUI ok %s" % self.name)
+            updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
+            self._load(updated_drinker)
+            Handlers.confirmed = True
+            popup.dismiss()
 
-            def on_dismissed(sself, *args):
-                if not sself.confirmed:
-                    print("GUI: cancelled: %s asks to drink %s." % (self.name, drink.intern_name))
+        def on_dismissed(sself, *args):
+            if not Handlers.confirmed:
+                print("GUI: cancelled: %s asks to drink %s." % (self.name, drink.intern_name))
 
-        handlers = Handlers()
-        popup.content.bind(on_press=handlers.on_confirmed)
-        popup.bind(on_dismiss=handlers.on_dismissed)
+        popup.content.bind(on_press=on_confirmed)
+        popup.bind(on_dismiss=on_dismissed)
         popup.open()
 
     @run_in_mainthread_blocking()
