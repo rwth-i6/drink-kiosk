@@ -118,7 +118,7 @@ class Db:
         self.drinkers_list_fn = "%s/drinkers/list.txt" % path
         self.drinker_names = open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
-        self.default_git_commit_wait_time = 10  # TODO change this...
+        self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
         self.tasks = []  # type: typing.List[Task]
