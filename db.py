@@ -196,22 +196,23 @@ class Db:
                 f.write("%r\n" % drinker)
             self.add_git_commit_task()
 
-    def drinker_buy_item(self, drinker_name, item_name):
+    def drinker_buy_item(self, drinker_name, item_name, amount=1):
         """
         :param str drinker_name:
         :param str item_name: intern name
+        :param int amount: can be negative, to undo drinks
         :return: updated Drinker
         :rtype: Drinker
         """
-        print("%s drinks %s." % (drinker_name, item_name))
+        print("%s drinks %s (amount: %i)." % (drinker_name, item_name, amount))
         with self.lock:
             drinker = self.get_drinker(drinker_name)
             item = self.get_buy_item_by_intern_name(item_name)
             drinker.buy_item_counts.setdefault(item_name, 0)
-            drinker.buy_item_counts[item_name] += 1
+            drinker.buy_item_counts[item_name] += amount
             drinker.total_buy_item_counts.setdefault(item_name, 0)
-            drinker.total_buy_item_counts[item_name] += 1
-            drinker.credit_balance -= item.price
+            drinker.total_buy_item_counts[item_name] += amount
+            drinker.credit_balance -= item.price * amount
             self.save_drinker(drinker)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
