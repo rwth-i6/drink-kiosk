@@ -205,6 +205,7 @@ class Db:
         :rtype: Drinker
         """
         print("%s drinks %s (amount: %i)." % (drinker_name, item_name, amount))
+        assert isinstance(amount, int)
         with self.lock:
             drinker = self.get_drinker(drinker_name)
             item = self.get_buy_item_by_intern_name(item_name)
