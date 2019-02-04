@@ -5,7 +5,6 @@ import argparse
 import sys
 from db import Db
 from utils import init_ipython_kernel
-import logging
 
 
 app = None
@@ -43,7 +42,6 @@ def main():
     # Do not globally import, as it has side effects.
     import kivy
     kivy.require("1.10.0")
-    kivy.logger.Logger.setLevel(logging.INFO if args.debug else logging.WARNING)
     from gui import KioskApp
     app = KioskApp(db=db)
     db.update_drinker_callbacks.append(app.reload)
