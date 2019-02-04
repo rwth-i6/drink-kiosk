@@ -110,11 +110,18 @@ class GitCommitDrinkersTask(Task):
 
     def do_task(self):
         try:
-            cmd = ["git", "commit"] + self.commit_files + ["-m", self.commit_msg]
+            cmd = ["git", "add"] + self.commit_files
             print("$ %s" % " ".join(cmd))
             subprocess.check_call(cmd, cwd=self.db.path)
         except subprocess.CalledProcessError as exc:
-            print("Git commit error:", exc)
+            print("Git add error:", exc)
+        else:
+            try:
+                cmd = ["git", "commit"] + self.commit_files + ["-m", self.commit_msg]
+                print("$ %s" % " ".join(cmd))
+                subprocess.check_call(cmd, cwd=self.db.path)
+            except subprocess.CalledProcessError as exc:
+                print("Git commit error:", exc)
 
 
 class Db:
