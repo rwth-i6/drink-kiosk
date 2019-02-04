@@ -47,7 +47,10 @@ def main():
     db.update_drinker_callbacks.append(app.reload)
     init_ipython_kernel(
         user_ns={"db": db, "app": app, "reload": reload}, debug_connection_filename=args.debug)
-    app.run()
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt")
 
 
 if __name__ == '__main__':
