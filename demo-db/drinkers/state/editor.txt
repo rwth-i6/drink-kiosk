@@ -1,5 +1,5 @@
 Drinker(
 name='editor',
-credit_balance=Decimal('0'),
-buy_item_counts={},
-total_buy_item_counts={})
+credit_balance=Decimal('-1.40'),
+buy_item_counts={'Mate': 1},
+total_buy_item_counts={'Mate': 1})
