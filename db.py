@@ -166,9 +166,10 @@ class Db:
         """
         return "%s/drinkers/state/%s.txt" % (self.path, drinker_name)
 
-    def get_drinker(self, name):
+    def get_drinker(self, name, allow_non_existing=False):
         """
         :param str name:
+        :param bool allow_non_existing:
         :rtype: Drinker
         """
         drinker_fn = self._drinker_fn(name)
@@ -179,6 +180,7 @@ class Db:
                 assert isinstance(drinker, Drinker)
                 assert drinker.name == name
             else:
+                assert allow_non_existing, "drinker %r is unknown"
                 drinker = Drinker(name=name)
         return drinker
 
@@ -242,7 +244,7 @@ class Db:
             # First add Git commit task, such that wait time is 0.
             self.add_git_commit_task(wait_time=0)
             for name in self.get_drinker_names():
-                drinker = self.get_drinker(name)
+                drinker = self.get_drinker(name, allow_non_existing=True)
                 self.save_drinker(drinker)
 
     def update_drinkers_list(self, verbose=False):
