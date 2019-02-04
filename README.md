@@ -7,3 +7,7 @@ Designed for our internal use at the [Human Language Technology and Pattern Reco
 For a demo, run:
 
     ./main.py --db demo-db
+
+Screenshot:
+
+![Screenshot](https://raw.githubusercontent.com/rwth-i6/drink-kiosk/master/demo-db/screenshot.png)
