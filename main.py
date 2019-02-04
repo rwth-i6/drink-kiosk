@@ -24,6 +24,7 @@ def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--db", required=True, help="path to database")
     arg_parser.add_argument("--update-drinkers-list", action="store_true")
+    arg_parser.add_argument("--debug", action="store_true")
     arg_parser.add_argument('kivy_args', nargs='*', help="use -- to separate the Kivy args")
     args = arg_parser.parse_args()
     db = Db(path=args.db)
@@ -44,7 +45,8 @@ def main():
     from gui import KioskApp
     app = KioskApp(db=db)
     db.update_drinker_callbacks.append(app.reload)
-    init_ipython_kernel(user_ns={"db": db, "app": app, "reload": reload})
+    init_ipython_kernel(
+        user_ns={"db": db, "app": app, "reload": reload}, debug_connection_filename=args.debug)
     app.run()
 
 
