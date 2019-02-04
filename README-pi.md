@@ -1,4 +1,54 @@
-I needed to change `~/.kivy/config.ini`:
+
+# Raspberry Pi related information
+
+You want to minimize the write access to the SD card.
+This kiosk and its DB should live on NFS (or another network mount).
+
+## Automatic startup
+
+We created a custom user (`kaffee-user` in this example).
+
+X server startup file `/etc/X11/Xsession.d/96kaffee-tmux`:
+
+    sudo -u kaffee-user bash /kaffee/start-tmux.sh &
+
+I have this file `/kaffee/start-tmux.sh`:
+
+    #!/bin/bash
+
+    set -x
+
+    tmux new-session -d -s kaffee
+    tmux send-keys /kaffee/start-kiosk.sh C-m
+
+And this file `/kaffee/start-kiosk.sh`:
+
+    #!/bin/bash
+
+    set -x
+
+    export DISPLAY=:0
+    export XAUTHORITY=/home/pi/.Xauthority
+    cd /kaffee/kiosk
+
+    while true; do
+      python3 ./main.py --db ../db
+      sleep 5
+    done
+
+
+## Logging
+
+Either the log files should go also on the NFS, or you want to disable them.
+Edit `~/.kivy/config.ini`:
+
+    [kivy]
+    ...
+    log_enable = 0
+
+## Touchscreen
+
+I needed to change `~/.kivy/config.ini` to allow the touchscreen input:
 
     [input]
     mouse = mouse
@@ -18,7 +68,7 @@ To rotate the touchscreen, probably the easy solution is to add this to `~/.kivy
     rotation = 270
 
 Another alternative option to do it for the whole system:
-    
+
 I modified `/boot/config.txt` to rotate our touchscreen:
 
     # https://elinux.org/RPiconfig
