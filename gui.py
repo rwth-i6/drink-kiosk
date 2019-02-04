@@ -113,7 +113,6 @@ class DrinkerWidget(BoxLayout):
             confirmed = False
 
         def on_confirmed(*args):
-            print("GUI ok %s" % self.name)
             updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
             self._load(updated_drinker)
             Handlers.confirmed = True
