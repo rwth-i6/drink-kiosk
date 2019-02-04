@@ -1,0 +1,5 @@
+[
+BuyItem("Coffee", "Coffee", "0.25"),
+BuyItem("Mate", "Mate", "1.40"),
+BuyItem("Beer", "Beer", 1),
+]
