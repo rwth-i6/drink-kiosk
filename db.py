@@ -63,6 +63,7 @@ class Task(Thread):
             if self.wait_time:
                 self.condition.wait(self.wait_time)
         with self.db.lock:
+            # noinspection PyBroadException
             try:
                 self.do_task()
             except Exception:
