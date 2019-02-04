@@ -182,7 +182,10 @@ class Db:
                 assert isinstance(drinker, Drinker)
                 assert drinker.name == name
             else:
-                assert allow_non_existing, "drinker %r is unknown" % name
+                if not allow_non_existing:
+                    from difflib import get_close_matches
+                    close_matches = get_close_matches(name, self.get_drinker_names())
+                    raise Exception("drinker %r is unknown. close matches: %r" % (name, close_matches))
                 drinker = Drinker(name=name)
         return drinker
 
