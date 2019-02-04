@@ -9,6 +9,7 @@ from threading import RLock, Thread, Condition
 from utils import better_repr
 import better_exchook
 import time
+import atexit
 
 
 class BuyItem:
@@ -122,6 +123,7 @@ class Db:
         self.buy_items = self._load_buy_items()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
         self.tasks = []  # type: typing.List[Task]
+        atexit.register(self._at_exit)
 
     def _load_buy_items(self):
         """
@@ -345,3 +347,15 @@ class Db:
         self.add_task(GitCommitDrinkersTask(
             db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
             wait_time=wait_time))
+
+    def _at_exit(self):
+        print("DB at exit handler.")
+        while True:
+            with self.lock:
+                if not self.tasks:
+                    break
+                task = self.tasks[0]
+                print("DB at exit handler: skip task:", task)
+                task.skip_wait_time()
+            # Outside the lock:
+            task.join()
