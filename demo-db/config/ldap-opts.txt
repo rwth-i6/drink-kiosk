@@ -1,0 +1,4 @@
+# normally you would use sth like this here:
+# ldapsearch -x -h <host>
+# but for this demo, we just output the existing list itself, so we do not change it
+./demo-db/drinkers/ldap-demo.py
