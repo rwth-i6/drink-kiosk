@@ -109,16 +109,22 @@ class DrinkerWidget(BoxLayout):
                 self.name, drink.shown_name, drink.price, self.db.currency)),
             size_hint=(0.7, 0.3))
 
-        def confirmed(*args):
-            updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
-            self._load(updated_drinker)
-            popup.dismiss()
+        class Handlers:
+            confirmed = False
 
-        def dismissed(*args):
-            print("GUI: dismissed: %s asks to drink %s." % (self.name, drink.intern_name))
+            def on_confirmed(sself, *args):
+                updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
+                self._load(updated_drinker)
+                sself.confirmed = True
+                popup.dismiss()
 
-        popup.content.bind(on_press=confirmed)
-        popup.bind(on_dismiss=dismissed)
+            def on_dismissed(sself, *args):
+                if not sself.confirmed:
+                    print("GUI: cancelled: %s asks to drink %s." % (self.name, drink.intern_name))
+
+        handlers = Handlers()
+        popup.content.bind(on_press=handlers.on_confirmed)
+        popup.bind(on_dismiss=handlers.on_dismissed)
         popup.open()
 
     @run_in_mainthread_blocking()
