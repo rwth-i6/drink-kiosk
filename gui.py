@@ -20,41 +20,44 @@ from asyncio import Future
 
 # noinspection PyPep8Naming
 class run_in_mainthread_blocking:
-    def __init__(self, func):
-        self.func = func
+    def __init__(self):
+        pass
 
-    def __call__(self, *args, **kwargs):
-        if threading.current_thread() is threading.main_thread():
-            return self.func(*args, **kwargs)
+    def __call__(self, func):
+        def wrapped_func(*args, **kwargs):
+            if threading.current_thread() is threading.main_thread():
+                return func(*args, **kwargs)
 
-        cond = Condition()
-        future = Future()
+            cond = Condition()
+            future = Future()
 
-        def callback_func(dt):
-            try:
-                res = self.func(*args, **kwargs)
-                with cond:
-                    future.set_result(res)
-                    cond.notify()
-            except Exception as exc:
-                with cond:
-                    future.set_exception(exc)
-                    cond.notify()
-            finally:
-                with cond:
-                    if not future.done():
-                        future.cancel()
+            def callback_func(dt):
+                try:
+                    res = func(*args, **kwargs)
+                    with cond:
+                        future.set_result(res)
                         cond.notify()
+                except Exception as exc:
+                    with cond:
+                        future.set_exception(exc)
+                        cond.notify()
+                finally:
+                    with cond:
+                        if not future.done():
+                            future.cancel()
+                            cond.notify()
 
-        with cond:
-            Clock.schedule_once(callback_func, 0)
-            cond.wait()
-            assert future.done()
-            if future.cancelled():
-                raise Exception("did not execute func %s" % self.func)
-            if future.exception():
-                raise future.exception()
-            return future.result()
+            with cond:
+                Clock.schedule_once(callback_func, 0)
+                cond.wait()
+                assert future.done()
+                if future.cancelled():
+                    raise Exception("did not execute func %s" % func)
+                if future.exception():
+                    raise future.exception()
+                return future.result()
+
+        return wrapped_func
 
 
 class Setter:
@@ -113,7 +116,7 @@ class DrinkerWidget(BoxLayout):
         popup.content.bind(on_press=confirmed)
         popup.open()
 
-    @run_in_mainthread_blocking
+    @run_in_mainthread_blocking()
     def _load(self, drinker=None):
         """
         :param Drinker drinker:
@@ -127,7 +130,7 @@ class DrinkerWidget(BoxLayout):
             count = drinker.buy_item_counts.get(intern_drink_name, 0)
             button.text = "%s (%s %s): %i" % (drink.shown_name, drink.price, self.db.currency, count)
 
-    @run_in_mainthread_blocking
+    @run_in_mainthread_blocking()
     def update(self):
         self._load()
 
@@ -149,13 +152,13 @@ class DrinkersListWidget(ScrollView):
         self.add_widget(self.layout)
         self.update_all()
 
-    @run_in_mainthread_blocking
+    @run_in_mainthread_blocking()
     def update_all(self):
         self.layout.clear_widgets()
         for drinker_name in sorted(self.db.get_drinker_names()):
             self.layout.add_widget(DrinkerWidget(db=self.db, name=drinker_name, size_hint_y=None, height=30))
 
-    @run_in_mainthread_blocking
+    @run_in_mainthread_blocking()
     def update_drinker(self, drinker_name):
         """
         :param str drinker_name:
@@ -182,7 +185,7 @@ class KioskApp(App):
     def on_start(self):
         pass
 
-    @run_in_mainthread_blocking
+    @run_in_mainthread_blocking()
     def reload(self, drinker_name=None):
         """
         :param str|None drinker_name:
