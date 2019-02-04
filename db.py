@@ -157,7 +157,9 @@ class Db:
         :param str name:
         :rtype: BuyItem
         """
-        return self.get_buy_items_by_intern_name()[name]
+        items = self.get_buy_items_by_intern_name()
+        assert name in items, "Unknown drink/item name %r; known ones: %r" % (name, items)
+        return items[name]
 
     def _drinker_fn(self, drinker_name):
         """
