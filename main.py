@@ -53,6 +53,7 @@ def main():
         print("KeyboardInterrupt")
     finally:
         db.at_exit()
+    print("Kiosk quit.")
 
 
 if __name__ == '__main__':
