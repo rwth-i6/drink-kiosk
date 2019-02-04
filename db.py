@@ -180,7 +180,7 @@ class Db:
                 assert isinstance(drinker, Drinker)
                 assert drinker.name == name
             else:
-                assert allow_non_existing, "drinker %r is unknown"
+                assert allow_non_existing, "drinker %r is unknown" % name
                 drinker = Drinker(name=name)
         return drinker
 
