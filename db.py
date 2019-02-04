@@ -52,10 +52,10 @@ class Task(Thread):
         :param Db db:
         :param float|None wait_time:
         """
+        super(Task, self).__init__(**kwargs)
         self.creation_time = time.time()
         self.db = db
         self.wait_time = wait_time
-        super(Task, self).__init__(**kwargs)
         self.condition = Condition()
 
     def run(self):
@@ -79,8 +79,18 @@ class Task(Thread):
     def do_task(self):
         raise NotImplementedError
 
+    @property
+    def delayed_time(self):
+        if getattr(self, "creation_time", None):
+            return time.time() - self.creation_time
+        return None
+
+    def verbose_existing(self):
+        return self.wait_time and self.delayed_time and self.delayed_time >= 0.5
+
     def __repr__(self):
-        return "<%s, delayed time %.1f>" % (self.__class__.__name__, time.time() - self.creation_time)
+        return "<%s, wait time %.1f, delayed time %.1f>" % (
+            self.__class__.__name__, self.wait_time or 0, self.delayed_time or -1)
 
     def __hash__(self):
         return hash(id(self))
@@ -333,7 +343,7 @@ class Db:
             if task in self.tasks:
                 idx = self.tasks.index(task)
                 existing_task = self.tasks[idx]
-                if existing_task.wait_time:  # keep silent if there is no wait time on it
+                if existing_task.verbose_existing():  # keep silent if there is no wait time on it
                     print("Task already exists:", existing_task)
                 if existing_task.wait_time and not task.wait_time:
                     print("Requested to skip wait time of task:", existing_task)
