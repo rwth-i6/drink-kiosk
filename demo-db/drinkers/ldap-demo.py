@@ -18,11 +18,15 @@ print("""# extended LDIF
 
 count = 0
 
+users = ["dummy"]
+
 for ln in open("%s/list.txt" % my_dir).read().splitlines():
     ln = ln.strip()
     if not ln or ln.startswith("#"):
         continue
-    username = ln
+    users.append(ln)
+
+for username in users:
     print("# %s, users" % username)
     print("dn: cn=%s,ou=users" % username)
     print("cn: %s" % username)
