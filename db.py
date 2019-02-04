@@ -6,7 +6,7 @@ from decimal import Decimal
 import subprocess
 from pprint import pprint
 from threading import RLock, Thread, Condition
-from utils import better_repr
+from utils import better_repr, is_git_dir
 import better_exchook
 import time
 
@@ -123,7 +123,7 @@ class Db:
         :param str path:
         """
         assert os.path.isdir(path)
-        assert os.path.exists("%s/.git" % path), "not a Git dir?"
+        assert is_git_dir(path), "not a Git dir?"
         self.path = path
         self.lock = RLock()
         self.drinkers_list_fn = "%s/drinkers/list.txt" % path
@@ -275,7 +275,10 @@ class Db:
         :param bool verbose:
         """
         ldap_cmd_fn = "%s/config/ldap-opts.txt" % self.path  # example: ldapsearch -x -h <host>
-        ldap_cmd = open(ldap_cmd_fn).read().strip().split(" ")
+        ldap_cmd = (
+            " ".
+            join([ln for ln in open(ldap_cmd_fn).read().splitlines() if not ln.startswith("#")]).
+            strip().split(" "))
         out = subprocess.check_output(ldap_cmd)
         lines = out.splitlines()
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path

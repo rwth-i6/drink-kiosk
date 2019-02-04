@@ -1,6 +1,7 @@
 
 import os
 import socket
+import subprocess
 
 
 def better_repr(obj):
@@ -58,3 +59,16 @@ def init_ipython_kernel(user_ns, debug_connection_filename=False):
         banner="Hello from i6 drink kiosk!\nAvailable variables:\n\n%s" % "".join(
             ["  %s = %r\n" % item for item in sorted(user_ns.items())]),
         user_ns=user_ns)
+
+
+def is_git_dir(path):
+    """
+    :param str path:
+    :rtype: bool
+    """
+    assert os.path.isdir(path)
+    try:
+        subprocess.check_call(["git", "status"], cwd=path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError:
+        return False
