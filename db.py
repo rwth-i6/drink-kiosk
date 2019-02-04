@@ -221,6 +221,9 @@ class Db:
             drinker.total_buy_item_counts[item_name] += amount
             drinker.credit_balance -= item.price * amount
             self.save_drinker(drinker)
+            if amount != 1:
+                # We want to have a Git commit right after (after the lock release), so enforce this now.
+                self.add_git_commit_task(wait_time=0)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
@@ -242,9 +245,9 @@ class Db:
             if drinker.credit_balance >= 0:
                 # Reset counts in this case.
                 drinker.buy_item_counts.clear()
+            self.save_drinker(drinker)
             # We want to have a Git commit right after (after the lock release), so enforce this now.
             self.add_git_commit_task(wait_time=0)
-            self.save_drinker(drinker)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
