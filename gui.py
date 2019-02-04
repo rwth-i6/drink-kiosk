@@ -102,6 +102,7 @@ class DrinkerWidget(BoxLayout):
         :param BuyItem drink:
         :param Button button:
         """
+        print("GUI: %s asks to drink %s." % (self.name, drink.intern_name))
         popup = Popup(
             title='Confirm: %s: Buy %s?' % (self.name, drink.shown_name),
             content=Button(text='%s wants to drink %s for %s %s.' % (
@@ -113,7 +114,11 @@ class DrinkerWidget(BoxLayout):
             updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
             self._load(updated_drinker)
 
+        def dismissed(*args):
+            print("GUI: dismissed: %s asks to drink %s." % (self.name, drink.intern_name))
+
         popup.content.bind(on_press=confirmed)
+        popup.bind(on_dismiss=dismissed)
         popup.open()
 
     @run_in_mainthread_blocking()
