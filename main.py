@@ -51,6 +51,8 @@ def main():
         app.run()
     except KeyboardInterrupt:
         print("KeyboardInterrupt")
+    finally:
+        db.at_exit()
 
 
 if __name__ == '__main__':
