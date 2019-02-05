@@ -1,5 +1,5 @@
 Drinker(
 name='kulikov',
-credit_balance=Decimal('0'),
-buy_item_counts={},
-total_buy_item_counts={})
+credit_balance=Decimal('-0.25'),
+buy_item_counts={'Coffee': 1},
+total_buy_item_counts={'Coffee': 1})
