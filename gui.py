@@ -105,8 +105,10 @@ class DrinkerWidget(BoxLayout):
         print("GUI: %s asks to drink %s." % (self.name, drink.intern_name))
         popup = Popup(
             title='Confirm: %s: Buy %s?' % (self.name, drink.shown_name),
-            content=Button(text='%s wants to drink %s for %s %s.' % (
-                self.name, drink.shown_name, drink.price, self.db.currency)),
+            content=Button(
+                text='[size=35]%s[/size]\nwants to drink [b]%s[/b] for %s %s.' % (
+                    self.name, drink.shown_name, drink.price, self.db.currency),
+                markup=True, halign="center"),
             size_hint=(0.7, 0.3))
 
         class Handlers:
