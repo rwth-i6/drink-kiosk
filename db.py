@@ -6,7 +6,7 @@ from decimal import Decimal
 import subprocess
 from pprint import pprint
 from threading import RLock, Thread, Condition
-from utils import better_repr, is_git_dir
+from utils import better_repr, is_git_dir, time_stamp
 import better_exchook
 import time
 
@@ -225,7 +225,7 @@ class Db:
         :return: updated Drinker
         :rtype: Drinker
         """
-        print("%s drinks %s (amount: %i)." % (drinker_name, item_name, amount))
+        print("%s: %s drinks %s (amount: %i)." % (time_stamp(), drinker_name, item_name, amount))
         assert isinstance(amount, int)
         with self.lock:
             drinker = self.get_drinker(drinker_name)
@@ -253,7 +253,7 @@ class Db:
         :rtype: Drinker
         """
         amount = Decimal(amount)
-        print("%s pays %s %s." % (drinker_name, amount, self.currency))
+        print("%s: %s pays %s %s." % (time_stamp(), drinker_name, amount, self.currency))
         with self.lock:
             drinker = self.get_drinker(drinker_name)
             drinker.credit_balance += amount

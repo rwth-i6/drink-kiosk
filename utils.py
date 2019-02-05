@@ -2,6 +2,7 @@
 import os
 import socket
 import subprocess
+import time
 
 
 def better_repr(obj):
@@ -72,3 +73,10 @@ def is_git_dir(path):
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+def time_stamp():
+    """
+    :rtype: str
+    """
+    return time.strftime("%Y%m%d.%H%M%S", time.localtime())
