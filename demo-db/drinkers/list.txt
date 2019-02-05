@@ -10,6 +10,7 @@ mccolgan
 irie
 openlieroxor
 petranek
+kulikov
 robot
 returnn
 rwth-i6
