@@ -51,7 +51,7 @@ class Task(Thread):
         :param Db db:
         :param float|None wait_time:
         """
-        super(Task, self).__init__(**kwargs)
+        super(Task, self).__init__(name=self.__class__.__name__, **kwargs)
         self.creation_time = time.time()
         self.db = db
         self.wait_time = wait_time

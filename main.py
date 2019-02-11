@@ -4,7 +4,7 @@ import better_exchook
 import argparse
 import sys
 from db import Db
-from utils import init_ipython_kernel
+from utils import init_ipython_kernel, enable_debug_threads
 
 
 app = None
@@ -27,6 +27,9 @@ def main():
     arg_parser.add_argument("--debug", action="store_true")
     arg_parser.add_argument('kivy_args', nargs='*', help="use -- to separate the Kivy args")
     args = arg_parser.parse_args()
+
+    enable_debug_threads()
+
     db = Db(path=args.db)
     if args.update_drinkers_list:
         print("Update drinkers list.")

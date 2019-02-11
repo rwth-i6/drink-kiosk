@@ -1,4 +1,5 @@
 
+import sys
 import os
 import socket
 import subprocess
@@ -80,3 +81,27 @@ def time_stamp():
     :rtype: str
     """
     return time.strftime("%Y%m%d.%H%M%S", time.localtime())
+
+
+def enable_debug_threads(trace_thread_init=False):
+    """
+    Installs a simple trace function via threading.settrace to print every new started thread.
+
+    :param bool trace_thread_init: hooks into Thread.__init__
+    """
+    import threading
+
+    def trace_dump_new_thread(frame, event, arg):
+        print("Started new thread:", threading.current_thread())
+        sys.settrace(None)
+
+    threading.settrace(trace_dump_new_thread)
+
+    if trace_thread_init:
+        orig_thread_debug_init = threading.Thread.__init__
+
+        def thread_debug_init(self, *args, **kwargs):
+            print("Created %s: %r, %r" % (self.__class__.__name__, args, kwargs))
+            orig_thread_debug_init(self, *args, **kwargs)
+
+        threading.Thread.__init__ = thread_debug_init
