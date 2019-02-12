@@ -46,7 +46,8 @@ def main():
     # Do not globally import, as it has side effects.
     import kivy
     kivy.require("1.10.0")
-    from gui import KioskApp
+    from gui import KioskApp, kill_at_night
+    kill_at_night()  # maybe make configurable...
     app = KioskApp(db=db)
     db.update_drinker_callbacks.append(app.reload)
     init_ipython_kernel(

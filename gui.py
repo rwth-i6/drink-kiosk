@@ -1,4 +1,7 @@
 
+import sys
+from threading import Thread
+import time
 import typing
 import kivy
 from kivy.app import App
@@ -15,7 +18,7 @@ import threading
 from threading import Condition
 from db import Db, BuyItem
 from kivy.clock import Clock
-from asyncio import Future
+from concurrent.futures import Future
 
 
 # noinspection PyPep8Naming
@@ -67,6 +70,39 @@ class Setter:
 
     def __call__(self, instance, value):
         setattr(self.obj, self.attrib, value)
+
+
+def kill_at_night(night_hours_range=(3, 4), min_runtime_hours=12):
+    """
+    :param (int|float,int|float) night_hours_range: start/end. 0 <= start < end <= 24.
+        E.g. (3,4) means it will get killed only between 3AM and 4AM.
+    :param int|float min_runtime_hours: it will not get killed if current runtime is less
+    """
+    def do_kill_me_now_at_night(dt):
+        print("It's late, good night.")
+        sys.exit()
+
+    assert len(night_hours_range) == 2 and 0 <= night_hours_range[0] < night_hours_range[1] <= 24
+    min_runtime_seconds = min_runtime_hours * 60 * 60
+
+    class KillAtNightTimerThread(Thread):
+        def __init__(self):
+            super(KillAtNightTimerThread, self).__init__(name=self.__class__.__name__, daemon=True)
+            self.start()
+
+        def run(self):
+            cur_runtime = 0.0
+            sleep_time = 10.0  # this is enough resolution
+            while True:
+                time.sleep(sleep_time)
+                cur_runtime += sleep_time
+                if cur_runtime > min_runtime_seconds:
+                    cur_time = time.localtime()
+                    cur_time_hours = cur_time.tm_hour + cur_time.tm_min / 60. + cur_time.tm_sec / 60. / 60.
+                    if night_hours_range[0] <= cur_time_hours <= night_hours_range[1]:
+                        Clock.schedule_once(do_kill_me_now_at_night, 0)
+
+    KillAtNightTimerThread()
 
 
 class DrinkerWidget(BoxLayout):
