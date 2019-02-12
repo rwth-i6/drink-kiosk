@@ -28,7 +28,8 @@ def main():
     arg_parser.add_argument('kivy_args', nargs='*', help="use -- to separate the Kivy args")
     args = arg_parser.parse_args()
 
-    enable_debug_threads()
+    if args.debug:
+        enable_debug_threads()
 
     db = Db(path=args.db)
     if args.update_drinkers_list:
