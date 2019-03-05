@@ -129,17 +129,20 @@ class Db:
         """
         :param str path:
         """
-        assert os.path.isdir(path)
-        assert is_git_dir(path), "not a Git dir?"
         self.path = path
         self.lock = RLock()
-        self.drinkers_list_fn = "%s/drinkers/list.txt" % path
+        self.drinkers_list_fn = "%s/drinkers/list.txt" % self.path
+        self._check_valid_path()
         self.drinker_names = self._open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
         self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
         self.tasks = []  # type: typing.List[Task]
+
+    def _check_valid_path(self):
+        assert os.path.isdir(self.path)
+        assert is_git_dir(self.path), "not a Git dir?"
 
     def _open(self, fn, mode="r"):
         return open(fn, mode)
@@ -165,6 +168,9 @@ class Db:
         return self.drinker_names
 
     def get_buy_items(self):
+        """
+        :rtype: list[BuyItem]
+        """
         return self.buy_items
 
     def get_buy_items_by_intern_name(self):
@@ -197,17 +203,19 @@ class Db:
         """
         drinker_fn = self._drinker_fn(name)
         with self.lock:
-            if os.path.exists(drinker_fn):
-                s = self._open(drinker_fn).read()
-                drinker = eval(s)
-                assert isinstance(drinker, Drinker)
-                assert drinker.name == name
-            else:
+            try:
+                f = self._open(drinker_fn)
+            except FileNotFoundError as exc:
                 if not allow_non_existing:
                     from difflib import get_close_matches
                     close_matches = get_close_matches(name, self.get_drinker_names())
                     raise Exception("drinker %r is unknown. close matches: %r" % (name, close_matches))
                 drinker = Drinker(name=name)
+            else:
+                s = f.read()
+                drinker = eval(s)
+                assert isinstance(drinker, Drinker)
+                assert drinker.name == name
         return drinker
 
     def save_drinker(self, drinker):
@@ -342,6 +350,18 @@ class Db:
                     f.write("%s\n" % name)
             self.save_all_drinkers()
 
+    def get_total_buy_item_counts(self):
+        """
+        :rtype: dict[str,int]
+        """
+        total_buy_item_counts = {}
+        for drinker_name in self.get_drinker_names():
+            drinker = self.get_drinker(drinker_name, allow_non_existing=True)
+            for key, value in drinker.total_buy_item_counts.items():
+                total_buy_item_counts.setdefault(key, 0)
+                total_buy_item_counts[key] += value
+        return total_buy_item_counts
+
     def reload(self):
         self.update_drinkers_list()
         self.update_buy_items()
@@ -384,3 +404,79 @@ class Db:
                 task.skip_wait_time()
             # Outside the lock:
             task.join()
+
+
+class HistoricDb(Db):
+    def __init__(self, path, git_revision):
+        """
+        :param str path:
+        :param str git_revision:
+        """
+        try:
+            # https://gitpython.readthedocs.io/en/stable/tutorial.html
+            import git
+        except ImportError:
+            print("pip3 install --user GitPython")
+            raise
+        self.git_mod = git
+        self.git_repo = git.Repo(path)
+        self.git_commit = self.git_repo.commit(git_revision)
+        assert isinstance(self.git_commit, git.Commit)
+        self.git_tree = self.git_commit.tree
+        assert isinstance(self.git_tree, git.Tree)
+        super(HistoricDb, self).__init__(path="")
+
+    def _check_valid_path(self):
+        self._open(self.drinkers_list_fn).read()
+
+    def _open(self, fn, mode="r"):
+        """
+        :param str fn:
+        :param str mode:
+        """
+        assert mode == "r", "only read support for custom file %r" % (fn,)
+        assert self.path == "" and fn.startswith("/")  # fn starts with "<path>/"
+        fn = fn[1:]
+        blob = self.git_tree.join(fn)
+        assert isinstance(blob, self.git_mod.Blob)
+        from io import TextIOWrapper, BytesIO
+        raw_stream = BytesIO(blob.data_stream.read())
+        return TextIOWrapper(raw_stream)
+
+
+def main():
+    import better_exchook
+    better_exchook.install()
+    from argparse import ArgumentParser
+    from pprint import pprint
+    import time
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument("--path", required=True, help="path of db")
+    arg_parser.add_argument("--rev")
+    args = arg_parser.parse_args()
+    cur_db = Db(path=args.path)
+    old_db = HistoricDb(path=args.path, git_revision=args.rev)
+    print(
+        "Old DB commit:",
+        old_db.git_commit.hexsha[:8], ",",
+        time.asctime(time.localtime(old_db.git_commit.authored_date)), ",",
+        old_db.git_commit.message.strip())
+    cur_drinkers = set(cur_db.get_drinker_names())
+    old_drinkers = set(old_db.get_drinker_names())
+    print("New drinkers:", cur_drinkers.difference(old_drinkers))
+    print("Removed drinkers:", old_drinkers.difference(cur_drinkers))
+    cur_total_buy_item_counts = cur_db.get_total_buy_item_counts()
+    old_total_buy_item_counts = old_db.get_total_buy_item_counts()
+    print("Current DB total buy items counts:")
+    pprint(cur_total_buy_item_counts)
+    print("Old DB total buy items counts:")
+    pprint(old_total_buy_item_counts)
+    keys = set(cur_total_buy_item_counts.keys()).union(set(old_total_buy_item_counts.keys()))
+    diff_total_buy_item_counts = {
+        key: cur_total_buy_item_counts.get(key, 0) - old_total_buy_item_counts.get(key, 0) for key in keys}
+    print("Diff total buy items counts:")
+    pprint(diff_total_buy_item_counts)
+
+
+if __name__ == "__main__":
+    main()
