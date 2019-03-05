@@ -134,19 +134,22 @@ class Db:
         self.path = path
         self.lock = RLock()
         self.drinkers_list_fn = "%s/drinkers/list.txt" % path
-        self.drinker_names = open(self.drinkers_list_fn).read().splitlines()
+        self.drinker_names = self._open(self.drinkers_list_fn).read().splitlines()
         self.currency = "€"
         self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
         self.tasks = []  # type: typing.List[Task]
 
+    def _open(self, fn, mode="r"):
+        return open(fn, mode)
+
     def _load_buy_items(self):
         """
         :rtype: list[BuyItem]
         """
         fn = "%s/config/buy_items.txt" % self.path
-        s = open(fn).read()
+        s = self._open(fn).read()
         buy_items = eval(s)
         assert isinstance(buy_items, list)
         assert all([isinstance(item, BuyItem) for item in buy_items])
@@ -195,7 +198,7 @@ class Db:
         drinker_fn = self._drinker_fn(name)
         with self.lock:
             if os.path.exists(drinker_fn):
-                s = open(drinker_fn).read()
+                s = self._open(drinker_fn).read()
                 drinker = eval(s)
                 assert isinstance(drinker, Drinker)
                 assert drinker.name == name
@@ -213,7 +216,7 @@ class Db:
         """
         drinker_fn = self._drinker_fn(drinker.name)
         with self.lock:
-            with open(drinker_fn, "w") as f:
+            with self._open(drinker_fn, "w") as f:
                 f.write("%r\n" % drinker)
             self.add_git_commit_task()
 
@@ -284,12 +287,12 @@ class Db:
         ldap_cmd_fn = "%s/config/ldap-opts.txt" % self.path  # example: ldapsearch -x -h <host>
         ldap_cmd = (
             " ".
-            join([ln for ln in open(ldap_cmd_fn).read().splitlines() if not ln.startswith("#")]).
+            join([ln for ln in self._open(ldap_cmd_fn).read().splitlines() if not ln.startswith("#")]).
             strip().split(" "))
         out = subprocess.check_output(ldap_cmd)
         lines = out.splitlines()
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path
-        exclude_users = set(open(drinkers_exclude_list_fn).read().splitlines())
+        exclude_users = set(self._open(drinkers_exclude_list_fn).read().splitlines())
         cur_entry = None  # type: typing.Optional[typing.Dict[str,typing.Union[str,typing.List[str]]]] # key -> value(s)
         multi_values = {"cn", "objectClass", "memberUid", "memberUid:"}
         drinkers_list = []  # type: typing.List[str]
@@ -333,7 +336,7 @@ class Db:
         print("Found %i users (potential drinkers)." % count)
         self.drinker_names = drinkers_list
         with self.lock:
-            with open(self.drinkers_list_fn, "w") as f:
+            with self._open(self.drinkers_list_fn, "w") as f:
                 for name in drinkers_list:
                     assert "\n" not in name
                     f.write("%s\n" % name)
