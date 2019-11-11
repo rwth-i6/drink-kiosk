@@ -292,6 +292,7 @@ class Db:
 
         :param bool verbose:
         """
+        from pprint import pformat
         ldap_cmd_fn = "%s/config/ldap-opts.txt" % self.path  # example: ldapsearch -x -h <host>
         ldap_cmd = (
             " ".
@@ -302,7 +303,7 @@ class Db:
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path
         exclude_users = set(self._open(drinkers_exclude_list_fn).read().splitlines())
         cur_entry = None  # type: typing.Optional[typing.Dict[str,typing.Union[str,typing.List[str]]]] # key -> value(s)
-        multi_values = {"cn", "objectClass", "memberUid", "memberUid:"}
+        multi_values = {"cn", "objectClass", "memberUid", "memberUid:", "description"}
         drinkers_list = []  # type: typing.List[str]
         last_key = None
         count = 0
@@ -328,9 +329,11 @@ class Db:
             line = line.decode("utf8")
             if line.startswith(' '):
                 assert cur_entry and last_key
-                assert last_key not in multi_values  # just not implemented...
                 assert last_key in cur_entry
-                cur_entry[last_key] += line[1:]
+                if last_key in multi_values:
+                    cur_entry[last_key][-1] += line[1:]
+                else:
+                    cur_entry[last_key] += line[1:]
                 continue
             if cur_entry is None:
                 cur_entry = {}
@@ -339,7 +342,8 @@ class Db:
             if key in multi_values:
                 cur_entry.setdefault(key, []).append(value)
             else:
-                assert key not in cur_entry, "line: %r" % line
+                assert key not in cur_entry, (
+                    "line: %r, key: %r, entry\n%s,\ncmd: %s" % (line, key, pformat(cur_entry), " ".join(ldap_cmd)))
                 cur_entry[key] = value
         print("Found %i users (potential drinkers)." % count)
         self.drinker_names = drinkers_list
