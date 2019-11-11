@@ -3,12 +3,13 @@
 import better_exchook
 import argparse
 import sys
+import typing
 from db import Db
 from utils import init_ipython_kernel, enable_debug_threads
 
 
 app = None
-db = None  # type: Db
+db = None  # type: typing.Optional[Db]
 
 
 def reload():
