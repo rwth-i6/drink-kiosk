@@ -42,11 +42,12 @@ def better_repr(obj):
     return repr(obj)
 
 
-def init_ipython_kernel(user_ns, debug_connection_filename=False):
+def init_ipython_kernel(user_ns, config_path, debug_connection_filename=False):
     """
     You can remotely connect to this IPython kernel. See the output on stdout.
 
     :param dict[str] user_ns:
+    :param str config_path: ".../config"
     :param bool debug_connection_filename:
     """
     connection_filename = "kernel.json"
@@ -55,12 +56,16 @@ def init_ipython_kernel(user_ns, debug_connection_filename=False):
         connection_filename = "%s-%s%s" % (fn, socket.gethostname(), ext)
 
     import background_zmq_ipython
-    background_zmq_ipython.init_ipython_kernel(
+    kernel = background_zmq_ipython.init_ipython_kernel(
         connection_filename=connection_filename,
         connection_fn_with_pid=debug_connection_filename,
         banner="Hello from i6 drink kiosk!\nAvailable variables:\n\n%s" % "".join(
             ["  %s = %r\n" % item for item in sorted(user_ns.items())]),
         user_ns=user_ns)
+    posthook_fn = "%s/ipython_posthook.py" % config_path
+    if os.path.exists(posthook_fn):
+        co = compile(open(posthook_fn).read(), posthook_fn, "exec")
+        eval(co, locals())
 
 
 def is_git_dir(path):
