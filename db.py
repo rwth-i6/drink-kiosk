@@ -158,7 +158,7 @@ class Db:
         assert all([isinstance(item, BuyItem) for item in buy_items])
         return buy_items
 
-    def update_buy_items(self):
+    def _update_buy_items(self):
         self.buy_items = self._load_buy_items()
 
     def get_drinker_names(self):
@@ -179,7 +179,7 @@ class Db:
         """
         return {item.intern_name: item for item in self.get_buy_items()}
 
-    def get_buy_item_by_intern_name(self, name):
+    def _get_buy_item_by_intern_name(self, name):
         """
         :param str name:
         :rtype: BuyItem
@@ -218,7 +218,7 @@ class Db:
                 assert drinker.name == name
         return drinker
 
-    def save_drinker(self, drinker):
+    def _save_drinker(self, drinker):
         """
         :param Drinker drinker:
         """
@@ -226,7 +226,7 @@ class Db:
         with self.lock:
             with self._open(drinker_fn, "w") as f:
                 f.write("%r\n" % drinker)
-            self.add_git_commit_task()
+            self._add_git_commit_task()
 
     def drinker_buy_item(self, drinker_name, item_name, amount=1):
         """
@@ -240,22 +240,23 @@ class Db:
         assert isinstance(amount, int)
         with self.lock:
             drinker = self.get_drinker(drinker_name)
-            item = self.get_buy_item_by_intern_name(item_name)
+            item = self._get_buy_item_by_intern_name(item_name)
             drinker.buy_item_counts.setdefault(item_name, 0)
             drinker.buy_item_counts[item_name] += amount
             drinker.total_buy_item_counts.setdefault(item_name, 0)
             drinker.total_buy_item_counts[item_name] += amount
             drinker.credit_balance -= item.price * amount
-            self.save_drinker(drinker)
+            self._save_drinker(drinker)
             if amount != 1:
                 # We want to have a Git commit right after (after the lock release), so enforce this now.
-                self.add_git_commit_task(wait_time=0)
+                self._add_git_commit_task(wait_time=0)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
 
     def drinker_pay(self, drinker_name, amount):
         """
+        Drinker ``drinker_name`` pays some amount ``amount``.
         This function would be called via RPC somehow.
 
         :param str drinker_name:
@@ -271,23 +272,24 @@ class Db:
             if drinker.credit_balance >= 0:
                 # Reset counts in this case.
                 drinker.buy_item_counts.clear()
-            self.save_drinker(drinker)
+            self._save_drinker(drinker)
             # We want to have a Git commit right after (after the lock release), so enforce this now.
-            self.add_git_commit_task(wait_time=0)
+            self._add_git_commit_task(wait_time=0)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
 
-    def save_all_drinkers(self):
+    def _save_all_drinkers(self):
         with self.lock:
             # First add Git commit task, such that wait time is 0.
-            self.add_git_commit_task(wait_time=0)
+            self._add_git_commit_task(wait_time=0)
             for name in self.get_drinker_names():
                 drinker = self.get_drinker(name, allow_non_existing=True)
-                self.save_drinker(drinker)
+                self._save_drinker(drinker)
 
     def update_drinkers_list(self, verbose=False):
         """
+        Updates drinker list.
         This has to run where LDAP is correctly configured.
 
         :param bool verbose:
@@ -352,7 +354,7 @@ class Db:
                 for name in drinkers_list:
                     assert "\n" not in name
                     f.write("%s\n" % name)
-            self.save_all_drinkers()
+            self._save_all_drinkers()
 
     def get_total_buy_item_counts(self):
         """
@@ -367,10 +369,13 @@ class Db:
         return total_buy_item_counts
 
     def reload(self):
+        """
+        Reload drinkers and buy items.
+        """
         self.update_drinkers_list()
-        self.update_buy_items()
+        self._update_buy_items()
 
-    def add_task(self, task):
+    def _add_task(self, task):
         """
         :param Task task:
         """
@@ -387,17 +392,20 @@ class Db:
             self.tasks.append(task)
             task.start()
 
-    def add_git_commit_task(self, wait_time=None):
+    def _add_git_commit_task(self, wait_time=None):
         """
         :param float|None wait_time:
         """
         if wait_time is None:
             wait_time = self.default_git_commit_wait_time
-        self.add_task(GitCommitDrinkersTask(
+        self._add_task(GitCommitDrinkersTask(
             db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
             wait_time=wait_time))
 
     def at_exit(self):
+        """
+        At-exit handler for the DB.
+        """
         print("DB at exit handler.")
         while True:
             with self.lock:
