@@ -228,6 +228,17 @@ class Db:
                 f.write("%r\n" % drinker)
             self._add_git_commit_task()
 
+    def get_drinkers_credit_balances_formatted(self):
+        """
+        :return: list of all drinkers credit balances formatted string (suitable for stdout)
+        :rtype: str
+        """
+        out = []
+        for drinker_name in sorted(self.get_drinker_names()):
+            drinker = self.get_drinker(drinker_name)
+            out.append("%s: %s\n" % (drinker_name, drinker.credit_balance))
+        return "".join(out)
+
     def drinker_buy_item(self, drinker_name, item_name, amount=1):
         """
         :param str drinker_name:
