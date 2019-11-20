@@ -10,7 +10,7 @@ import typing
 from decimal import Decimal
 
 
-main_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+main_dir = os.path.dirname(os.path.dirname(os.path.abspath(os.path.realpath(__file__))))
 
 
 def sysexec_out(*args, **kwargs):
