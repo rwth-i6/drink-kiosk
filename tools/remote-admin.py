@@ -8,6 +8,7 @@ import atexit
 import ast
 import typing
 from decimal import Decimal
+from subprocess import Popen, PIPE, CalledProcessError
 
 
 main_dir = os.path.dirname(os.path.dirname(os.path.abspath(os.path.realpath(__file__))))
@@ -26,7 +27,6 @@ def sysexec_out(*args, **kwargs):
             stdin_bytes = stdin_bytes.encode("utf8")
     else:
         stdin_bytes = None
-    from subprocess import Popen, PIPE, CalledProcessError
     p = Popen(args, shell=False, stdin=PIPE if stdin_bytes is not None else None, stdout=PIPE, **kwargs)
     out, _ = p.communicate(stdin_bytes)
     if p.returncode != 0:
@@ -111,7 +111,7 @@ class CmdArg:
         """
         :param str help_name:
         :param (str)->object parser:
-        :param typing.Container[str] choices:
+        :param typing.Iterable[str] choices:
         """
         self.help_name = help_name
         self.parser = parser
@@ -119,17 +119,25 @@ class CmdArg:
 
 
 class Cmd:
-    def __init__(self, args, func):
+    def __init__(self, args, func, help_str=None):
         """
         :param list[CmdArg] args:
         :param function func:
+        :param str|None help_str:
         """
         self.args = args
         self.func = func
+        self.help_str = help_str
 
     @property
     def args_help(self):
         return " ".join([arg.help_name for arg in self.args])
+
+    @property
+    def full_help_str(self):
+        if self.help_str:
+            return "%s -- %s" % (self.args_help, self.help_str)
+        return self.args_help
 
 
 class Main:
@@ -143,7 +151,7 @@ class Main:
         self.kernel_fn = kernel_fn
 
         # Get DB-path, mostly as a check.
-        db_path = sysexec_out("jupyter", "run", "--existing", kernel_fn, stdin="db.path")
+        db_path = self._remote_exec("db.path")
         db_path = ast.literal_eval(db_path)
         assert isinstance(db_path, str)
         if not db_path.startswith("/"):
@@ -151,8 +159,7 @@ class Main:
         assert os.path.exists(db_path)
         self.db_path = db_path
 
-        drinkers_credit_balances_str = sysexec_out(
-            "jupyter", "run", "--existing", kernel_fn, stdin="db.get_drinkers_credit_balances_formatted()")
+        drinkers_credit_balances_str = self._remote_exec("db.get_drinkers_credit_balances_formatted()")
         drinkers_credit_balances_str = ast.literal_eval(drinkers_credit_balances_str)
         assert isinstance(drinkers_credit_balances_str, str)
         drinkers_credit_balances = {}  # type: typing.Dict[str,Decimal]
@@ -167,9 +174,17 @@ class Main:
 
         self._cmd_arg_drinker = CmdArg("<name>", self._parse_drinker_name, self.drinker_names)
         self._cmd_arg_amount = CmdArg("<amount>", self._parse_amount)
+        self._cmd_arg_purchase = CmdArg("<purchase>", self._parse_purchase)
         self.available_cmds = {
             "drinker_pay": Cmd([self._cmd_arg_drinker, self._cmd_arg_amount], self.drinker_pay),
             "drinker_state": Cmd([self._cmd_arg_drinker], self.drinker_state),
+            "admin_pay": Cmd(
+                [self._cmd_arg_drinker, self._cmd_arg_purchase, self._cmd_arg_amount], self.admin_pay,
+                "admin will give money <amount> to the user"),
+            "admin_set_cash_position": Cmd(
+                [self._cmd_arg_amount], self.admin_set_cash_position, "overwrite after manual counting"),
+            "admin_state": Cmd([], self.admin_state),
+            "help": Cmd([], self.help),
             "exit": Cmd([], self.exit)}
         self.readline_completer = ReadlineCompleter(main=self, prompt="Command: ")
 
@@ -205,6 +220,27 @@ class Main:
             raise Exception("invalid amount %r: %s" % (arg, exc))
         return amount
 
+    def _parse_purchase(self, arg):
+        """
+        :param str arg:
+        :rtype: str
+        """
+        arg = arg.strip()
+        assert arg, "provide some text for the purchase"
+        return arg
+
+    def _remote_exec(self, cmd_str):
+        """
+        :param str cmd_str: Python code
+        :return: output (Python repr)
+        :rtype: str
+        """
+        try:
+            return sysexec_out("jupyter", "run", "--existing", self.kernel_fn, stdin=cmd_str)
+        except CalledProcessError as exc:
+            print("CalledProcessError:", exc)
+            sys.exit(1)
+
     def drinker_pay(self, name, amount):
         """
         :param str name:
@@ -212,8 +248,7 @@ class Main:
         """
         assert name in self.drinker_names, "User %r does not seem to exist." % name
 
-        state_str = sysexec_out(
-            "jupyter", "run", "--existing", self.kernel_fn, stdin="db.drinker_pay(%r, %r)" % (name, str(amount)))
+        state_str = self._remote_exec("db.drinker_pay(%r, %r)" % (name, str(amount)))
         print(state_str)
 
         run_posthook(
@@ -225,18 +260,44 @@ class Main:
         :param str name:
         """
         assert name in self.drinker_names, "User %r does not seem to exist." % name
-        state_str = sysexec_out(
-            "jupyter", "run", "--existing", self.kernel_fn, stdin="db.get_drinker(%r)" % (name,))
+        state_str = self._remote_exec("db.get_drinker(%r)" % (name,))
         print(state_str)
+
+    def admin_pay(self, name, purchase, amount):
+        """
+        :param str name:
+        :param str purchase:
+        :param Decimal amount:
+        """
+        assert name in self.drinker_names, "User %r does not seem to exist." % name
+        state_str = self._remote_exec("db.admin_pay(%r, %r, %r)" % (name, purchase, str(amount)))
+        state_str = ast.literal_eval(state_str)
+        print(state_str)
+
+    def admin_set_cash_position(self, amount):
+        """
+        :param Decimal amount:
+        """
+        state_str = self._remote_exec("db.admin_set_cash_position(%r)" % (str(amount),))
+        state_str = ast.literal_eval(state_str)
+        print(state_str)
+
+    def admin_state(self):
+        state_str = self._remote_exec("db.get_admin_state_formatted()")
+        state_str = ast.literal_eval(state_str)
+        print(state_str)
+
+    def help(self):
+        print("Available commands:")
+        for cmd_name, cmd in self.available_cmds.items():
+            print("  %s %s" % (cmd_name, cmd.full_help_str))
 
     def exit(self):
         sys.exit(0)
 
     def run(self):
+        self.help()
         while True:
-            print("Available commands:")
-            for cmd_name, cmd in self.available_cmds.items():
-                print("  %s %s" % (cmd_name, cmd.args_help))
             try:
                 while True:
                     cmd_line = input(self.readline_completer.prompt)

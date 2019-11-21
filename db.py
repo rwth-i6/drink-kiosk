@@ -45,13 +45,58 @@ class Drinker:
             ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]))
 
 
-class Task(Thread):
+class AdminCashPosition:
+    DbFilePath = "admin-cash-position.txt"
+
+    def __init__(self, cash_position=0, purchases=None):
+        """
+        :param Decimal|str|int cash_position:
+        :param list[(str,str,Decimal)] purchases:
+        """
+        self.cash_position = Decimal(cash_position)
+        if purchases is None:
+            purchases = []
+        self.purchases = purchases
+
+    def pay_purchase(self, user_name, item_name, money_amount):
+        """
+        :param str user_name:
+        :param str item_name:
+        :param Decimal money_amount:
+        """
+        assert isinstance(user_name, str) and isinstance(item_name, str)
+        money_amount = Decimal(money_amount)
+        self.purchases.append((user_name, item_name, money_amount))
+        self.cash_position -= money_amount
+
+    def __repr__(self):
+        attribs = ["cash_position", "purchases"]
+        return "%s(\n%s)" % (
+            self.__class__.__name__,
+            ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]))
+
+    def format(self):
+        """
+        :return: shortened, formatted, suitable for stdout
+        :rtype: str
+        """
+        purchases_str = []
+        if len(self.purchases) > 5:
+            purchases_str.append("...")
+        purchases_str.extend([", ".join(map(str, purchase)) for purchase in self.purchases])
+        return "".join(
+            ["purchases:\n"] +
+            ["  %s\n" % s for s in purchases_str] +
+            ["cash position: %s\n" % self.cash_position])
+
+
+class _Task(Thread):
     def __init__(self, db, wait_time=None, **kwargs):
         """
         :param Db db:
         :param float|None wait_time:
         """
-        super(Task, self).__init__(name=self.__class__.__name__, **kwargs)
+        super(_Task, self).__init__(name=self.__class__.__name__, **kwargs)
         self.creation_time = time.time()
         self.db = db
         self.wait_time = wait_time
@@ -98,13 +143,13 @@ class Task(Thread):
         return isinstance(other, self.__class__)
 
 
-class GitCommitDrinkersTask(Task):
+class _GitCommitBaseTask(_Task):
     def __init__(self, commit_files, commit_msg, **kwargs):
         """
         :param list[str] commit_files:
         :param str commit_msg:
         """
-        super(GitCommitDrinkersTask, self).__init__(**kwargs)
+        super(_GitCommitBaseTask, self).__init__(**kwargs)
         self.commit_files = commit_files
         self.commit_msg = commit_msg
 
@@ -124,6 +169,20 @@ class GitCommitDrinkersTask(Task):
                 print("Git commit error:", exc)
 
 
+class _GitCommitDrinkersTask(_GitCommitBaseTask):
+    def __init__(self, **kwargs):
+        super(_GitCommitDrinkersTask, self).__init__(
+            commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
+            **kwargs)
+
+
+class _GitCommitAdminCashTask(_GitCommitBaseTask):
+    def __init__(self, **kwargs):
+        super(_GitCommitAdminCashTask, self).__init__(
+            commit_files=[AdminCashPosition.DbFilePath], commit_msg="drink-kiosk: admin-cash-position",
+            **kwargs)
+
+
 class Db:
     def __init__(self, path):
         """
@@ -137,8 +196,9 @@ class Db:
         self.currency = "€"
         self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
+        self.admin_cash_position = self._load_admin_cash_position()
         self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
-        self.tasks = []  # type: typing.List[Task]
+        self.tasks = []  # type: typing.List[_Task]
 
     def _check_valid_path(self):
         assert os.path.isdir(self.path)
@@ -160,6 +220,61 @@ class Db:
 
     def _update_buy_items(self):
         self.buy_items = self._load_buy_items()
+
+    def _load_admin_cash_position(self):
+        """
+        :rtype: AdminCashPosition
+        """
+        fn = "%s/%s" % (self.path, AdminCashPosition.DbFilePath)
+        if os.path.exists(fn):
+            s = self._open(fn).read()
+            obj = eval(s)
+            assert isinstance(obj, AdminCashPosition)
+            return obj
+        return AdminCashPosition()
+
+    def get_admin_state_formatted(self):
+        """
+        :return: admin cash position, shortened, formatted, suitable for stdout
+        :rtype: str
+        """
+        return self.admin_cash_position.format()
+
+    def admin_pay(self, drinker_name, purchase, amount):
+        """
+        :param str drinker_name:
+        :param str purchase: can be any string, does not need to be a buy item from the Db
+        :param Decimal amount: money paid (the drinker/user gets this money out from the admin cash)
+        :return: new state, via get_admin_state_formatted
+        :rtype: str
+        """
+        with self.lock:
+            self.admin_cash_position.pay_purchase(user_name=drinker_name, item_name=purchase, money_amount=amount)
+            self._save_admin_cash_position()
+            return self.get_admin_state_formatted()
+
+    def admin_set_cash_position(self, cash_position_amount):
+        """
+        :param Decimal cash_position_amount:
+        :return: string describing change
+        :rtype: str
+        """
+        cash_position_amount = Decimal(cash_position_amount)
+        with self.lock:
+            old = self.admin_cash_position.cash_position
+            self.admin_cash_position.cash_position = cash_position_amount
+            self._save_admin_cash_position()
+            return "admin cash position: old %s -> new %s" % (old, self.admin_cash_position.cash_position)
+
+    def _save_admin_cash_position(self):
+        fn = "%s/%s" % (self.path, AdminCashPosition.DbFilePath)
+        with self.lock:
+            with self._open(fn, "w") as f:
+                f.write("%r\n" % self.admin_cash_position)
+            self._add_git_commit_admin_cash_task(wait_time=0)  # always save right now
+
+    def _update_admin_cash_position(self):
+        self.admin_cash_position = self._load_admin_cash_position()
 
     def get_drinker_names(self):
         """
@@ -226,7 +341,7 @@ class Db:
         with self.lock:
             with self._open(drinker_fn, "w") as f:
                 f.write("%r\n" % drinker)
-            self._add_git_commit_task()
+            self._add_git_commit_drinkers_task()
 
     def get_drinkers_credit_balances_formatted(self):
         """
@@ -260,7 +375,7 @@ class Db:
             self._save_drinker(drinker)
             if amount != 1:
                 # We want to have a Git commit right after (after the lock release), so enforce this now.
-                self._add_git_commit_task(wait_time=0)
+                self._add_git_commit_drinkers_task(wait_time=0)
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
@@ -285,7 +400,9 @@ class Db:
                 drinker.buy_item_counts.clear()
             self._save_drinker(drinker)
             # We want to have a Git commit right after (after the lock release), so enforce this now.
-            self._add_git_commit_task(wait_time=0)
+            self._add_git_commit_drinkers_task(wait_time=0)
+            self.admin_cash_position.cash_position += amount
+            self._save_admin_cash_position()
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
@@ -293,7 +410,7 @@ class Db:
     def _save_all_drinkers(self):
         with self.lock:
             # First add Git commit task, such that wait time is 0.
-            self._add_git_commit_task(wait_time=0)
+            self._add_git_commit_drinkers_task(wait_time=0)
             for name in self.get_drinker_names():
                 drinker = self.get_drinker(name, allow_non_existing=True)
                 self._save_drinker(drinker)
@@ -381,21 +498,22 @@ class Db:
 
     def reload(self):
         """
-        Reload drinkers and buy items.
+        Reload drinkers, buy items, etc.
         """
         self.update_drinkers_list()
         self._update_buy_items()
+        self._update_admin_cash_position()
 
     def _add_task(self, task):
         """
-        :param Task task:
+        :param _Task task:
         """
         with self.lock:
             if task in self.tasks:
                 idx = self.tasks.index(task)
                 existing_task = self.tasks[idx]
                 if existing_task.verbose_existing():  # keep silent if there is no wait time on it
-                    print("Task already exists:", existing_task)
+                    print("_Task already exists:", existing_task)
                 if existing_task.wait_time and not task.wait_time:
                     print("Requested to skip wait time of task:", existing_task)
                     existing_task.skip_wait_time()
@@ -403,15 +521,21 @@ class Db:
             self.tasks.append(task)
             task.start()
 
-    def _add_git_commit_task(self, wait_time=None):
+    def _add_git_commit_drinkers_task(self, wait_time=None):
         """
         :param float|None wait_time:
         """
         if wait_time is None:
             wait_time = self.default_git_commit_wait_time
-        self._add_task(GitCommitDrinkersTask(
-            db=self, commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
-            wait_time=wait_time))
+        self._add_task(_GitCommitDrinkersTask(db=self, wait_time=wait_time))
+
+    def _add_git_commit_admin_cash_task(self, wait_time=None):
+        """
+        :param float|None wait_time:
+        """
+        if wait_time is None:
+            wait_time = self.default_git_commit_wait_time
+        self._add_task(_GitCommitAdminCashTask(db=self, wait_time=wait_time))
 
     def at_exit(self):
         """
