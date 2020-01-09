@@ -151,9 +151,12 @@ class DrinkerWidget(BoxLayout):
             confirmed = False
 
         def on_confirmed(*args):
-            updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
-            self._load(updated_drinker)
-            Handlers.confirmed = True
+            # It could be that the GUI was hanging, and the user clicked multiple times on it,
+            # and this gets executed multiple times.
+            if not Handlers.confirmed:
+                Handlers.confirmed = True
+                updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
+                self._load(updated_drinker)
             popup.dismiss()
 
         def on_dismissed(sself, *args):
