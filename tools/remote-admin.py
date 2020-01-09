@@ -172,17 +172,29 @@ class Main:
         self.drinker_names = sorted(drinkers_credit_balances.keys())
         self.drinkers_credit_balances = drinkers_credit_balances
 
+        buy_items_str = self._remote_exec("sorted(db.get_buy_items_by_intern_name().keys())")
+        buy_items = ast.literal_eval(buy_items_str)
+        assert isinstance(buy_items, list) and buy_items and isinstance(buy_items[0], str)
+        self.buy_items = buy_items  # type: typing.List[str]
+
         self._cmd_arg_drinker = CmdArg("<name>", self._parse_drinker_name, self.drinker_names)
-        self._cmd_arg_amount = CmdArg("<amount>", self._parse_amount)
+        self._cmd_arg_money_amount = CmdArg("<money-amount>", self._parse_money_amount)
         self._cmd_arg_purchase = CmdArg("<purchase>", self._parse_purchase)
+        self._cmd_arg_item_amount = CmdArg("<item-amount>", self._parse_item_amount)
+        self._cmd_arg_item = CmdArg("<item>", self._parse_item, self.buy_items)
         self.available_cmds = {
-            "drinker_pay": Cmd([self._cmd_arg_drinker, self._cmd_arg_amount], self.drinker_pay),
+            "drinker_pay": Cmd(
+                [self._cmd_arg_drinker, self._cmd_arg_money_amount], self.drinker_pay,
+                "drinker pays money to the admin"),
+            "drinker_buy_item": Cmd(
+                [self._cmd_arg_drinker, self._cmd_arg_item, self._cmd_arg_item_amount], self.drinker_buy_item,
+                "drinker can buy some drink (or undo that, by giving negative amount)"),
             "drinker_state": Cmd([self._cmd_arg_drinker], self.drinker_state),
             "admin_pay": Cmd(
-                [self._cmd_arg_drinker, self._cmd_arg_purchase, self._cmd_arg_amount], self.admin_pay,
-                "admin will give money <amount> to the user"),
+                [self._cmd_arg_drinker, self._cmd_arg_purchase, self._cmd_arg_money_amount], self.admin_pay,
+                "admin will give money <amount> to the user (because the user bought sth)"),
             "admin_set_cash_position": Cmd(
-                [self._cmd_arg_amount], self.admin_set_cash_position, "overwrite after manual counting"),
+                [self._cmd_arg_money_amount], self.admin_set_cash_position, "overwrite after manual counting"),
             "admin_state": Cmd([], self.admin_state),
             "help": Cmd([], self.help),
             "exit": Cmd([], self.exit)}
@@ -209,7 +221,7 @@ class Main:
             raise Exception("invalid user name %r" % arg)
         return arg
 
-    def _parse_amount(self, arg):
+    def _parse_money_amount(self, arg):
         """
         :param str arg:
         :rtype: Decimal
@@ -217,17 +229,38 @@ class Main:
         try:
             amount = Decimal(arg)
         except Exception as exc:
-            raise Exception("invalid amount %r: %s" % (arg, exc))
+            raise Exception("invalid money amount %r: %s" % (arg, exc))
         return amount
 
     def _parse_purchase(self, arg):
         """
-        :param str arg:
+        :param str arg: any text description
         :rtype: str
         """
         arg = arg.strip()
         assert arg, "provide some text for the purchase"
         return arg
+
+    def _parse_item(self, arg):
+        """
+        :param str arg:
+        :rtype: str
+        """
+        arg = arg.strip()
+        assert arg in self.buy_items, (
+            "invalid drink buy item name %r. valid names: %r" % (arg, self.buy_items))
+        return arg
+
+    def _parse_item_amount(self, arg):
+        """
+        :param str arg:
+        :rtype: int
+        """
+        try:
+            amount = int(arg)
+        except Exception as exc:
+            raise Exception("invalid item amount %r: %s" % (arg, exc))
+        return amount
 
     def _remote_exec(self, cmd_str):
         """
@@ -254,6 +287,17 @@ class Main:
         run_posthook(
             "%s/config/remote_drinker_pay_posthook.py" % self.db_path,
             {"name": name, "amount": amount, "state_str": state_str})
+
+    def drinker_buy_item(self, name, item_name, amount):
+        """
+        :param str name:
+        :param str item_name:
+        :param int amount:
+        """
+        assert name in self.drinker_names, "User %r does not seem to exist." % name
+
+        state_str = self._remote_exec("db.drinker_buy_item(%r, %r, %r)" % (name, item_name, amount))
+        print(state_str)
 
     def drinker_state(self, name):
         """
