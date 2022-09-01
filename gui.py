@@ -159,7 +159,7 @@ class DrinkerWidget(BoxLayout):
                 self._load(updated_drinker)
             popup.dismiss()
 
-        def on_dismissed(sself, *args):
+        def on_dismissed(*args):
             if not Handlers.confirmed:
                 print("GUI: cancelled: %s asks to drink %s." % (self.name, drink.intern_name))
 
