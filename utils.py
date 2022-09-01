@@ -103,6 +103,7 @@ def enable_debug_threads(trace_thread_init=False):
     threading.settrace(trace_dump_new_thread)
 
     if trace_thread_init:
+        # noinspection PyTypeChecker
         orig_thread_debug_init = threading.Thread.__init__
 
         def thread_debug_init(self, *args, **kwargs):
