@@ -1,8 +1,13 @@
+"""
+GUI
+"""
 
+from __future__ import annotations
 import sys
 from threading import Thread
 import time
 import typing
+from typing import Optional
 import kivy
 from kivy.app import App
 from kivy.uix.widget import Widget
@@ -16,7 +21,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
 import threading
 from threading import Condition
-from db import Db, BuyItem
+from db import Db, BuyItem, Drinker
 from kivy.clock import Clock
 from concurrent.futures import Future
 
@@ -106,11 +111,7 @@ def kill_at_night(night_hours_range=(3, 4), min_runtime_hours=12):
 
 
 class DrinkerWidget(BoxLayout):
-    def __init__(self, db, name, **kwargs):
-        """
-        :param Db db:
-        :param str name:
-        """
+    def __init__(self, db: Db, name: str, **kwargs):
         super(DrinkerWidget, self).__init__(spacing=4, orientation="horizontal", **kwargs)
         self.db = db
         self.name = name
@@ -133,11 +134,7 @@ class DrinkerWidget(BoxLayout):
         # in background? Thread(target=self._load, daemon=True).start()
         self._load()
 
-    def _on_drink_button_click(self, drink, button):
-        """
-        :param BuyItem drink:
-        :param Button button:
-        """
+    def _on_drink_button_click(self, drink: BuyItem, button: Button):
         print("GUI: %s asks to drink %s." % (self.name, drink.intern_name))
         popup = Popup(
             title='Confirm: %s: Buy %s?' % (self.name, drink.shown_name),
@@ -150,7 +147,7 @@ class DrinkerWidget(BoxLayout):
         class Handlers:
             confirmed = False
 
-        def on_confirmed(*args):
+        def on_confirmed(*_args):
             # It could be that the GUI was hanging, and the user clicked multiple times on it,
             # and this gets executed multiple times.
             if not Handlers.confirmed:
@@ -159,7 +156,7 @@ class DrinkerWidget(BoxLayout):
                 self._load(updated_drinker)
             popup.dismiss()
 
-        def on_dismissed(*args):
+        def on_dismissed(*_args):
             if not Handlers.confirmed:
                 print("GUI: cancelled: %s asks to drink %s." % (self.name, drink.intern_name))
 
@@ -168,10 +165,7 @@ class DrinkerWidget(BoxLayout):
         popup.open()
 
     @run_in_mainthread_blocking()
-    def _load(self, drinker=None):
-        """
-        :param Drinker drinker:
-        """
+    def _load(self, drinker: Optional[Drinker] = None):
         if not drinker:
             drinker = self.db.get_drinker(self.name)
         self.credit_balance_label.text = "%s %s" % (drinker.credit_balance, self.db.currency)
