@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
 import better_exchook
 import argparse
 import sys
-import typing
 from db import Db
 from utils import init_ipython_kernel, enable_debug_threads
+from typing import TYPE_CHECKING, Optional
+if TYPE_CHECKING:
+    import gui
 
 
-app = None
-db = None  # type: typing.Optional[Db]
+app = None  # type: Optional[gui.KioskApp]
+db = None  # type: Optional[Db]
 
 
 def reload():
