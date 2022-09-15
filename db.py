@@ -278,9 +278,18 @@ class Db:
 
     def get_drinker_names(self):
         """
+        :return: current active drinkers (shown in GUI)
         :rtype: list[str]
         """
         return self.drinker_names
+
+    def get_drinker_names_all_in_db(self):
+        """
+        :return: all drinkers in the database (not necessarily shown in GUI)
+        :rtype: list[str]
+        """
+        import glob
+        return sorted([os.path.basename(fn).rsplit(".", 2)[0] for fn in glob.glob(self._drinker_filename("*"))])
 
     def get_buy_items(self):
         """
@@ -348,9 +357,12 @@ class Db:
         :return: list of all drinkers credit balances formatted string (suitable for stdout)
         :rtype: str
         """
+        active_drinker_names = set(self.get_drinker_names())
         out = []
-        for drinker_name in sorted(self.get_drinker_names()):
+        for drinker_name in sorted(self.get_drinker_names_all_in_db()):
             drinker = self.get_drinker(drinker_name)
+            if drinker_name not in active_drinker_names and not drinker.credit_balance:
+                continue
             out.append("%s: %s\n" % (drinker_name, drinker.credit_balance))
         return "".join(out)
 
