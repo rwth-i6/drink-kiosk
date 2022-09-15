@@ -2,7 +2,6 @@
 GUI
 """
 
-from __future__ import annotations
 import sys
 from threading import Thread
 import time
