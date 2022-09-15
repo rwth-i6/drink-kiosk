@@ -303,7 +303,7 @@ class Db:
         assert name in items, "Unknown drink/item name %r; known ones: %r" % (name, items)
         return items[name]
 
-    def _drinker_fn(self, drinker_name):
+    def _drinker_filename(self, drinker_name):
         """
         :param str drinker_name:
         :rtype: str
@@ -316,7 +316,7 @@ class Db:
         :param bool allow_non_existing:
         :rtype: Drinker
         """
-        drinker_fn = self._drinker_fn(name)
+        drinker_fn = self._drinker_filename(name)
         with self.lock:
             try:
                 f = self._open(drinker_fn)
@@ -337,7 +337,7 @@ class Db:
         """
         :param Drinker drinker:
         """
-        drinker_fn = self._drinker_fn(drinker.name)
+        drinker_fn = self._drinker_filename(drinker.name)
         with self.lock:
             with self._open(drinker_fn, "w") as f:
                 f.write("%r\n" % drinker)
