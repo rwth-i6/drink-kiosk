@@ -190,9 +190,9 @@ class Db:
         """
         self.path = path
         self.lock = RLock()
-        self.drinkers_list_fn = "%s/drinkers/list.txt" % self.path
+        self.drinkers_list_filename = "%s/drinkers/list.txt" % self.path
         self._check_valid_path()
-        self.drinker_names = self._open(self.drinkers_list_fn).read().splitlines()
+        self.drinker_names = self._open(self.drinkers_list_filename).read().splitlines()
         self.currency = "€"
         self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
@@ -478,7 +478,7 @@ class Db:
         print("Found %i users (potential drinkers)." % count)
         self.drinker_names = drinkers_list
         with self.lock:
-            with self._open(self.drinkers_list_fn, "w") as f:
+            with self._open(self.drinkers_list_filename, "w") as f:
                 for name in drinkers_list:
                     assert "\n" not in name
                     f.write("%s\n" % name)
@@ -574,7 +574,7 @@ class HistoricDb(Db):
         super(HistoricDb, self).__init__(path="")
 
     def _check_valid_path(self):
-        self._open(self.drinkers_list_fn).read()
+        self._open(self.drinkers_list_filename).read()
 
     def _open(self, fn, mode="r"):
         """
