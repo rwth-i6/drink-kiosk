@@ -418,7 +418,6 @@ def run_posthook(posthook_fn, user_ns):
 def _parse_drinkers_with_credit_balance(s: str) -> Dict[str, Decimal]:
     out = {}
     for line in s.splitlines():
-        print("  %s" % line)
         drinker_name, credit_balance_str = line.split(":", 2)
         credit_balance = Decimal(credit_balance_str)
         out[drinker_name] = credit_balance
