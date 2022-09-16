@@ -357,13 +357,24 @@ class Db:
         :return: list of all drinkers credit balances formatted string (suitable for stdout)
         :rtype: str
         """
-        active_drinker_names = set(self.get_drinker_names())
         out = []
         for drinker_name in sorted(self.get_drinker_names_all_in_db()):
             drinker = self.get_drinker(drinker_name)
-            if drinker_name not in active_drinker_names and not drinker.credit_balance:
-                continue
             out.append("%s: %s\n" % (drinker_name, drinker.credit_balance))
+        return "".join(out)
+
+    def get_drinker_inactive_and_non_neg_balance_formatted(self):
+        """
+        :return: list of all inactive drinkers with non-negative credit balances formatted string
+        :rtype: str
+        """
+        out = []
+        for drinker_name in sorted(self.get_drinker_names_all_in_db()):
+            if drinker_name in self.get_drinker_names():
+                continue  # still active
+            drinker = self.get_drinker(drinker_name)
+            if drinker.credit_balance >= 0:
+                out.append("%s: %s\n" % (drinker_name, drinker.credit_balance))
         return "".join(out)
 
     def drinker_buy_item(self, drinker_name, item_name, amount=1):
@@ -418,6 +429,25 @@ class Db:
         for cb in self.update_drinker_callbacks:
             cb(drinker_name)
         return drinker
+
+    def drinkers_delete(self, drinkers):
+        """
+        Delete the list of inactive drinkers. Only allowed when their credit balance is non-negative.
+        (If you would want to delete other drinkers as well, just do that manually in the DB files.)
+
+        :param list[str] drinkers:
+        """
+        if not drinkers:
+            return
+        with self.lock:
+            self._add_git_commit_drinkers_task(wait_time=0)
+            for drinker_name in drinkers:
+                if drinker_name in self.get_drinker_names():
+                    raise Exception("drinker %r is still active" % drinker_name)
+                drinker = self.get_drinker(drinker_name)
+                if drinker.credit_balance < 0:
+                    raise Exception("drinker %r has negative credit balance %s" % (drinker_name, drinker.credit_balance))
+                os.remove(self._drinker_filename(drinker_name))
 
     def _save_all_drinkers(self):
         with self.lock:
