@@ -212,7 +212,7 @@ class DrinkersListWidget(ScrollView):
             if widget.name == drinker_name:
                 widget.update()
                 return
-        raise Exception("Unknown drinker: %r" % (drinker_name,))
+        # No exception here. This could happen e.g. for drinker in DB but not in GUI.
 
 
 class KioskApp(App):
