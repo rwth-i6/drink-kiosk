@@ -28,6 +28,7 @@ def main():
     arg_parser.add_argument("--db", required=True, help="path to database")
     arg_parser.add_argument("--update-drinkers-list", action="store_true")
     arg_parser.add_argument("--debug", action="store_true")
+    arg_parser.add_argument("--readonly", action="store_true", help="do not write to DB")
     arg_parser.add_argument('kivy_args', nargs='*', help="use -- to separate the Kivy args")
     args = arg_parser.parse_args()
 
@@ -35,6 +36,10 @@ def main():
         enable_debug_threads()
 
     db = Db(path=args.db)
+
+    if args.readonly:
+        db.read_only = True
+
     if args.update_drinkers_list:
         print("Update drinkers list.")
         db.update_drinkers_list(verbose=True)

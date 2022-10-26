@@ -184,6 +184,8 @@ class _GitCommitAdminCashTask(_GitCommitBaseTask):
 
 
 class Db:
+    read_only = False
+
     def __init__(self, path):
         """
         :param str path:
@@ -267,6 +269,8 @@ class Db:
             return "admin cash position: old %s -> new %s" % (old, self.admin_cash_position.cash_position)
 
     def _save_admin_cash_position(self):
+        if self.read_only:
+            return
         fn = "%s/%s" % (self.path, AdminCashPosition.DbFilePath)
         with self.lock:
             with self._open(fn, "w") as f:
@@ -346,6 +350,8 @@ class Db:
         """
         :param Drinker drinker:
         """
+        if self.read_only:
+            return
         drinker_fn = self._drinker_filename(drinker.name)
         with self.lock:
             with self._open(drinker_fn, "w") as f:
@@ -567,6 +573,8 @@ class Db:
         """
         :param float|None wait_time:
         """
+        if self.read_only:
+            return
         if wait_time is None:
             wait_time = self.default_git_commit_wait_time
         self._add_task(_GitCommitDrinkersTask(db=self, wait_time=wait_time))
@@ -575,6 +583,8 @@ class Db:
         """
         :param float|None wait_time:
         """
+        if self.read_only:
+            return
         if wait_time is None:
             wait_time = self.default_git_commit_wait_time
         self._add_task(_GitCommitAdminCashTask(db=self, wait_time=wait_time))
@@ -596,6 +606,8 @@ class Db:
 
 
 class HistoricDb(Db):
+    read_only = True
+
     def __init__(self, path, git_revision):
         """
         :param str path:
