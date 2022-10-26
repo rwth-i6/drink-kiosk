@@ -26,3 +26,6 @@ Or maybe:
 Screenshot:
 
 ![Screenshot](https://raw.githubusercontent.com/rwth-i6/drink-kiosk/master/demo-db/screenshot.png)
+
+Minimum supported Python version: 3.5
+(Because our Raspberry Pi Linux only has that...)
