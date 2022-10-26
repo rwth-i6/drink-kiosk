@@ -19,6 +19,10 @@ For a demo, run:
 
     ./main.py --db demo-db
 
+Or maybe:
+
+    ./main.py --db demo-db --readonly
+
 Screenshot:
 
 ![Screenshot](https://raw.githubusercontent.com/rwth-i6/drink-kiosk/master/demo-db/screenshot.png)
