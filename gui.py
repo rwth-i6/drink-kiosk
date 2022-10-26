@@ -213,6 +213,17 @@ class DrinkersListWidget(ScrollView):
 
 
 class KioskApp(App):
+    """
+    Builds the Kivy GUI app.
+
+    Note, when interactively debugging, to get access to DrinkersListWidget:
+
+        app.root
+
+    and to individual DrinkerWidget instances:
+
+        app.root.layout.children
+    """
     def __init__(self, db):
         """
         :param Db db:
@@ -221,6 +232,7 @@ class KioskApp(App):
         super(KioskApp, self).__init__()
 
     def build(self):
+        # After this returns, later self.root will ref to this instance.
         return DrinkersListWidget(db=self.db)
 
     def on_start(self):
