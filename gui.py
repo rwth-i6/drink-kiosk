@@ -7,14 +7,11 @@ from threading import Thread
 import time
 import typing
 from typing import Optional
-import kivy
 from kivy.app import App
-from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-# noinspection PyUnresolvedReferences
 from kivy.graphics import Color, Rectangle
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
@@ -38,7 +35,7 @@ class run_in_mainthread_blocking:
             cond = Condition()
             future = Future()
 
-            def callback_func(dt):
+            def callback_func(_dt):
                 try:
                     res = func(*args, **kwargs)
                     with cond:
@@ -82,7 +79,7 @@ def kill_at_night(night_hours_range=(3, 4), min_runtime_hours=12):
         E.g. (3,4) means it will get killed only between 3AM and 4AM.
     :param int|float min_runtime_hours: it will not get killed if current runtime is less
     """
-    def do_kill_me_now_at_night(dt):
+    def do_kill_me_now_at_night(_dt):
         print("It's late, good night.")
         sys.exit()
 
