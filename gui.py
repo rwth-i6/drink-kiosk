@@ -15,6 +15,7 @@ from kivy.uix.label import Label
 from kivy.graphics import Color, Rectangle
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.popup import Popup
+from kivy.animation import Animation
 import threading
 from threading import Condition
 from db import Db, BuyItem, Drinker
@@ -150,6 +151,14 @@ class DrinkerWidget(BoxLayout):
                 Handlers.confirmed = True
                 updated_drinker = self.db.drinker_buy_item(drinker_name=self.name, item_name=drink.intern_name)
                 self._load(updated_drinker)
+
+                button.background_color = (0, 1, 0, 1)
+                anim = getattr(button, "_drink_kiosk_drink_click_fadeout_anim", None)
+                if anim is None:
+                    anim = Animation(background_color=(1, 1, 1, 1), duration=60)
+                    button._drink_kiosk_drink_click_fadeout_anim = anim
+                anim.start(button)
+
             popup.dismiss()
 
         def on_dismissed(*_args):
