@@ -155,7 +155,11 @@ class DrinkerWidget(BoxLayout):
                 button.background_color = (0, 1, 0, 1)
                 anim = getattr(button, "_drink_kiosk_drink_click_fadeout_anim", None)
                 if anim is None:
-                    anim = Animation(background_color=(1, 1, 1, 1), duration=120, step=1000)
+                    anim = Animation(
+                        background_color=(1, 1, 1, 1),  # default background color
+                        duration=60 * 5,  # seconds
+                        step=5000  # milliseconds
+                    )
                     button._drink_kiosk_drink_click_fadeout_anim = anim
                 anim.start(button)
 
