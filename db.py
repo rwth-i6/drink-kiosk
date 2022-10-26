@@ -333,7 +333,7 @@ class Db:
         with self.lock:
             try:
                 f = self._open(drinker_fn)
-            except FileNotFoundError as exc:
+            except FileNotFoundError:
                 if not allow_non_existing:
                     from difflib import get_close_matches
                     close_matches = get_close_matches(name, self.get_drinker_names())
@@ -452,7 +452,8 @@ class Db:
                     raise Exception("drinker %r is still active" % drinker_name)
                 drinker = self.get_drinker(drinker_name)
                 if drinker.credit_balance < 0:
-                    raise Exception("drinker %r has negative credit balance %s" % (drinker_name, drinker.credit_balance))
+                    raise Exception(
+                        "drinker %r has negative credit balance %s" % (drinker_name, drinker.credit_balance))
                 os.remove(self._drinker_filename(drinker_name))
 
     def _save_all_drinkers(self):
