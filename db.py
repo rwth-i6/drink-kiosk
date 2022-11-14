@@ -293,7 +293,7 @@ class Db:
         :rtype: list[str]
         """
         import glob
-        return sorted([os.path.basename(fn).rsplit(".", 2)[0] for fn in glob.glob(self._drinker_filename("*"))])
+        return sorted([os.path.basename(fn).rsplit(".", 1)[0] for fn in glob.glob(self._drinker_filename("*"))])
 
     def get_buy_items(self):
         """
