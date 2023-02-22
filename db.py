@@ -485,11 +485,15 @@ class Db:
         multi_values = {"cn", "objectClass", "memberUid", "memberUid:", "description"}
         drinkers_list = []  # type: typing.List[str]
         last_key = None
+        cur_line_is_comment, last_line_was_comment = False, False
         count = 0
-        for line in lines:
+        for line_num, line in enumerate(lines):
+            last_line_was_comment = cur_line_is_comment
             assert isinstance(line, bytes)
             if line.startswith(b'#'):
+                cur_line_is_comment = True
                 continue
+            cur_line_is_comment = False
             if not line:
                 if cur_entry:
                     # Finished one entry.
@@ -507,7 +511,10 @@ class Db:
                 continue
             line = line.decode("utf8")
             if line.startswith(' '):
-                assert cur_entry and last_key
+                if last_line_was_comment:
+                    cur_line_is_comment = True
+                    continue
+                assert cur_entry and last_key, "line %i: %s" % (line_num + 1, line)
                 assert last_key in cur_entry
                 if last_key in multi_values:
                     cur_entry[last_key][-1] += line[1:]
