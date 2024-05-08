@@ -1,0 +1,5 @@
+{
+    # shadowExpire: the date on which the user login will be disabled (number of days since January 1, 1970).
+    # Just check for existence of this field here.
+    "shadowExpire": {"default": None, "required": None, "dtype": int},
+}

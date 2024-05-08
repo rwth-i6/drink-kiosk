@@ -502,14 +502,46 @@ class Db:
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path
         exclude_users = set(self._open(drinkers_exclude_list_fn).read().splitlines())
         cur_entry = None  # type: Optional[Dict[str,Union[str,List[str]]]] # key -> value(s)
+        if self._exists("%s/config/ldap_attrib_filter.txt" % self.path):
+            ldap_flags = eval(self._open("%s/config/ldap_attrib_filter.txt" % self.path).read())
+            assert isinstance(ldap_flags, dict)
+        else:
+            ldap_flags = {}
+
+        def _parse_ldap_value_with_dtype(s, dtype):
+            """
+            :param str s:
+            :param type[T] dtype:
+            :rtype: T
+            """
+            if dtype is bool:
+                if s.lower() in ["true", "yes", "1"]:
+                    return True
+                if s.lower() in ["false", "no", "0"]:
+                    return False
+                raise ValueError("invalid bool value %r" % s)
+            return dtype(s)
+
+        def _check_ldap_flag(key_, default, dtype, required):
+            """
+            :param str key_:
+            :param T default:
+            :param type[T] dtype:
+            :param T required:
+            """
+            if key_ in cur_entry:
+                value_ = cur_entry[key_]
+                value_ = _parse_ldap_value_with_dtype(value_, dtype)
+            else:
+                value_ = default
+            return value_ == required
 
         def _should_add_cur_entry() -> bool:
             if cur_entry["uid"] in exclude_users:
                 return False
-            # shadowExpire: the date on which the user login will be disabled (number of days since January 1, 1970).
-            # Just check for existence of this field here.
-            if cur_entry.get("shadowExpire", None) is not None:
-                return False
+            for key_, opts in ldap_flags.items():
+                if not _check_ldap_flag(key_=key_, **opts):
+                    return False
             return True
 
         multi_values = {"cn", "objectClass", "memberUid", "memberUid:", "description"}
