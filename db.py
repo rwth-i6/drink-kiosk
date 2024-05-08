@@ -210,7 +210,18 @@ class Db:
         assert is_git_dir(self.path), "not a Git dir?"
 
     def _open(self, fn, mode="r"):
+        """
+        :param str fn:
+        :param str mode:
+        """
         return open(fn, mode)
+
+    def _exists(self, fn):
+        """
+        :param str fn:
+        :rtype: bool
+        """
+        return os.path.exists(fn)
 
     def _load_buy_items(self):
         """
@@ -231,7 +242,7 @@ class Db:
         :rtype: AdminCashPosition
         """
         fn = "%s/%s" % (self.path, AdminCashPosition.DbFilePath)
-        if os.path.exists(fn):
+        if self._exists(fn):
             s = self._open(fn).read()
             obj = eval(s)
             assert isinstance(obj, AdminCashPosition)
@@ -667,11 +678,25 @@ class HistoricDb(Db):
         assert mode == "r", "only read support for custom file %r" % (fn,)
         assert self.path == "" and fn.startswith("/")  # fn starts with "<path>/"
         fn = fn[1:]
-        blob = self.git_tree.join(fn)
+        try:
+            blob = self.git_tree.join(fn)
+        except KeyError as exc:
+            raise FileNotFoundError(str(exc))
         assert isinstance(blob, self.git_mod.Blob)
         from io import TextIOWrapper, BytesIO
         raw_stream = BytesIO(blob.data_stream.read())
         return TextIOWrapper(raw_stream)
+
+    def _exists(self, fn):
+        """
+        :param str fn:
+        :rtype: bool
+        """
+        try:
+            self._open(fn)
+            return True
+        except FileNotFoundError:
+            return False
 
 
 def main():
