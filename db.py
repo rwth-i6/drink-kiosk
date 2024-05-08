@@ -469,8 +469,14 @@ class Db:
 
     def update_drinkers_list(self, verbose=False):
         """
-        Updates drinker list.
+        Updates active drinker list (:func:`get_drinker_names`) via LDAP (using ``config/ldap-opts.txt``).
         This has to run where LDAP is correctly configured.
+
+        This will not delete any drinkers from the DB.
+        In case some drinker has been added previously, but is not in the active drinker list anymore,
+        the user will not be shown in the GUI, but the user will still be in the DB.
+        To remove any inactive drinkers, use ``tools/remote-admin.py``
+        and the ``drinker_delete_inactive_non_neg_balance`` command.
 
         :param bool verbose:
         """
