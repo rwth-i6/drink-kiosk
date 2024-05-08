@@ -29,3 +29,23 @@ Screenshot:
 
 Minimum supported Python version: 3.5
 (Because our Raspberry Pi Linux only has that...)
+
+
+# Usage
+
+You need some minimal preparation for the DB.
+Create a new directory for the DB, and initialize an empty Git repository in it.
+The `demo-db` directory here is an example for the DB directory.
+Create the config files, e.g. by copying it from `demo-db/config`.
+
+For the GUI, run `main.py --db <your-db-dir>`.
+
+Currently, the drinkers list is updated via LDAP via the file `config/ldap-opts.txt` in the DB.
+The update is done at every startup of the app.
+(We restart the app every night.)
+
+The drinkers list update will not delete any drinkers from the DB.
+In case some drinker has been added previously, but is not in the active drinker list anymore,
+the user will not be shown in the GUI, but the user will still be in the DB.
+To remove any inactive drinkers, use `tools/remote-admin.py`
+and the `drinker_delete_inactive_non_neg_balance` command.
