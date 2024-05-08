@@ -485,6 +485,16 @@ class Db:
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path
         exclude_users = set(self._open(drinkers_exclude_list_fn).read().splitlines())
         cur_entry = None  # type: typing.Optional[typing.Dict[str,typing.Union[str,typing.List[str]]]] # key -> value(s)
+
+        def _should_add_cur_entry() -> bool:
+            if cur_entry["uid"] in exclude_users:
+                return False
+            # shadowExpire: the date on which the user login will be disabled (number of days since January 1, 1970).
+            # Just check for existence of this field here.
+            if cur_entry.get("shadowExpire", None) is not None:
+                return False
+            return True
+
         multi_values = {"cn", "objectClass", "memberUid", "memberUid:", "description"}
         drinkers_list = []  # type: typing.List[str]
         last_key = None
@@ -503,11 +513,10 @@ class Db:
                     # Either there is a "dn" entry, or this is the final search result info (last output).
                     assert "dn" in cur_entry or set(cur_entry.keys()) == {"search", "result"}
                     if "uid" in cur_entry:
-                        drinker_name = cur_entry["uid"]
-                        if not int(cur_entry.get("shadowExpire", "0")) and drinker_name not in exclude_users:
+                        if _should_add_cur_entry():
                             if verbose:
                                 pprint(cur_entry)
-                            drinkers_list.append(drinker_name)
+                            drinkers_list.append(cur_entry["uid"])
                             count += 1
                 cur_entry = None
                 last_key = None
