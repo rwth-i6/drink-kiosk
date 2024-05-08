@@ -1,5 +1,5 @@
 
-import typing
+from typing import Optional, Union, Callable, List, Dict
 import sys
 import os
 from decimal import Decimal
@@ -33,8 +33,8 @@ class Drinker:
         """
         self.name = name
         self.credit_balance = Decimal(credit_balance)
-        self.buy_item_counts = buy_item_counts or {}  # type: typing.Dict[str,int]
-        self.total_buy_item_counts = total_buy_item_counts or {}  # type: typing.Dict[str,int]
+        self.buy_item_counts = buy_item_counts or {}  # type: Dict[str,int]
+        self.total_buy_item_counts = total_buy_item_counts or {}  # type: Dict[str,int]
         if self.buy_item_counts and not self.total_buy_item_counts:
             self.total_buy_item_counts = self.buy_item_counts.copy()
 
@@ -202,8 +202,8 @@ class Db:
         self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
         self.admin_cash_position = self._load_admin_cash_position()
-        self.update_drinker_callbacks = []  # type: typing.List[typing.Callable[[str], None]]
-        self.tasks = []  # type: typing.List[_Task]
+        self.update_drinker_callbacks = []  # type: List[Callable[[str], None]]
+        self.tasks = []  # type: List[_Task]
 
     def _check_valid_path(self):
         assert os.path.isdir(self.path)
@@ -484,7 +484,7 @@ class Db:
         lines = out.splitlines()
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path
         exclude_users = set(self._open(drinkers_exclude_list_fn).read().splitlines())
-        cur_entry = None  # type: typing.Optional[typing.Dict[str,typing.Union[str,typing.List[str]]]] # key -> value(s)
+        cur_entry = None  # type: Optional[Dict[str,Union[str,List[str]]]] # key -> value(s)
 
         def _should_add_cur_entry() -> bool:
             if cur_entry["uid"] in exclude_users:
@@ -496,7 +496,7 @@ class Db:
             return True
 
         multi_values = {"cn", "objectClass", "memberUid", "memberUid:", "description"}
-        drinkers_list = []  # type: typing.List[str]
+        drinkers_list = []  # type: List[str]
         last_key = None
         cur_line_is_comment, last_line_was_comment = False, False
         count = 0
