@@ -37,6 +37,19 @@ And this file `/kaffee/start-kiosk.sh`:
       sleep 5
     done
 
+This assumes that `pi` is the main user which automatically logs in to the graphical desktop.
+For the user `pi`, it is probably necessary to give permission for the X access.
+For a newer Debian 12.5, we did that via `/home/pi/.config/wayland.ini`:
+
+    [autostart]
+    xauth_coffee = $HOME/bin/auth_coffee.sh
+
+And `/home/pi/bin/auth_coffee.sh`:
+
+    #!/bin/bash
+    sleep 10  # make sure X is available
+    xhost +local:kaffee-user  # give permission
+
 
 ## Logging
 
