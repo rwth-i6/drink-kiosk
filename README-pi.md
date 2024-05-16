@@ -29,7 +29,8 @@ And this file `/kaffee/start-kiosk.sh`:
     set -x
 
     export DISPLAY=:0
-    export XAUTHORITY=/home/pi/.Xauthority
+    # XAUTHORITY not necessarily needed with xhost, see below.
+    # export XAUTHORITY=/home/pi/.Xauthority
     cd /kaffee/kiosk
 
     while true; do
@@ -69,7 +70,7 @@ I needed to change `~/.kivy/config.ini` to allow the touchscreen input:
     mouse = mouse
     %(name)s = probesysfs,provider=hidinput
     # https://github.com/kivy/kivy/issues/3640
-    mtdev_%(name)s = probesysfs,provider=mtdev
+    # mtdev_%(name)s = probesysfs,provider=mtdev  # try enabling on older Pis?
     hid_%(name)s = probesysfs,provider=hidinput
 
     [modules]
