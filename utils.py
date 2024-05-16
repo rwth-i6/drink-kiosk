@@ -56,12 +56,22 @@ def init_ipython_kernel(user_ns, config_path, debug_connection_filename=False):
         connection_filename = "%s-%s%s" % (fn, socket.gethostname(), ext)
 
     import background_zmq_ipython
+    # Note on allow_remote_connections: There is still a random secret key in the connection file,
+    # and if the connection file is not readable by others, they still cannot connect.
+    extra = dict(allow_remote_connections=True)
+    if sys.version_info[:2] < (3, 7):
+        # Older Python versions need to use a much older background_zmq_ipython version.
+        # E.g. I have background_zmq_ipython-1.20190201.160734 with Python 3.5 on Debian 9.4 on the older Pi.
+        # The older background_zmq_ipython does not have this option.
+        # (No easy way currently to check for the background_zmq_ipython version directly.)
+        extra.pop("allow_remote_connections")
     kernel = background_zmq_ipython.init_ipython_kernel(
         connection_filename=connection_filename,
         connection_fn_with_pid=debug_connection_filename,
         banner="Hello from i6 drink kiosk!\nAvailable variables:\n\n%s" % "".join(
             ["  %s = %r\n" % item for item in sorted(user_ns.items())]),
-        user_ns=user_ns)
+        user_ns=user_ns,
+        **extra)
     posthook_fn = "%s/ipython_posthook.py" % config_path
     if os.path.exists(posthook_fn):
         co = compile(open(posthook_fn).read(), posthook_fn, "exec")
