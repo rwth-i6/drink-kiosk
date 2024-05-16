@@ -46,7 +46,7 @@ def init_ipython_kernel(user_ns, config_path, debug_connection_filename=False):
     """
     You can remotely connect to this IPython kernel. See the output on stdout.
 
-    :param dict[str] user_ns:
+    :param dict[str,typing.Any] user_ns:
     :param str config_path: ".../config"
     :param bool debug_connection_filename:
     """
