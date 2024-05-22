@@ -113,16 +113,16 @@ class DrinkerWidget(BoxLayout):
     Widget for a single drinker.
     """
 
-    def __init__(self, db: Db, name: str, **kwargs):
+    def __init__(self, db: Db, drinker: Drinker, **kwargs):
         super(DrinkerWidget, self).__init__(spacing=4, orientation="horizontal", **kwargs)
         self.db = db
-        self.name = name
-        self.shown_name = name  # updated in _load
+        self.drinker = drinker  # cached here. WARNING: might not be up-to-date
+        self.name = drinker.name
         # White background
         with self.canvas.before:
             Color(1, 1, 1, 1)
             self.rect = Rectangle(size=self.size, pos=self.pos)
-        self.name_label = Label(text=self.shown_name, color=(0, 0, 0, 1))
+        self.name_label = Label(text=self.drinker.shown_name, color=(0, 0, 0, 1))
         self.add_widget(self.name_label)
         self.credit_balance_label = Label(text="... %s" % self.db.currency, color=(0, 0, 0, 1))
         self.add_widget(self.credit_balance_label)
@@ -134,7 +134,7 @@ class DrinkerWidget(BoxLayout):
             self.add_widget(button)
             self.drink_buttons[drink.intern_name] = button
         self.bind(size=Setter(self.rect, "size"), pos=Setter(self.rect, "pos"))
-        self._load()
+        self._load(drinker)
 
     def _on_drink_button_click(self, drink: BuyItem, button: Button):
         print("GUI: %s asks to drink %s." % (self.name, drink.intern_name))
@@ -142,7 +142,7 @@ class DrinkerWidget(BoxLayout):
             title="Confirm: %s: Buy %s?" % (self.name, drink.shown_name),
             content=Button(
                 text="[size=35]%s (%s)[/size]\nwants to drink [b]%s[/b] for %s %s."
-                % (self.shown_name, self.name, drink.shown_name, drink.price, self.db.currency),
+                % (self.drinker.shown_name, self.name, drink.shown_name, drink.price, self.db.currency),
                 markup=True,
                 halign="center",
             ),
@@ -185,6 +185,7 @@ class DrinkerWidget(BoxLayout):
         assert threading.current_thread() is threading.main_thread()
         if not drinker:
             drinker = self.db.get_drinker(self.name)
+        self.drinker = drinker
         self.shown_name = drinker.shown_name
         self.name_label.text = self.shown_name
         self.credit_balance_label.text = "%s %s" % (drinker.credit_balance, self.db.currency)
@@ -219,8 +220,12 @@ class DrinkersListWidget(ScrollView):
     @run_in_mainthread_blocking()
     def update_all(self):
         self.layout.clear_widgets()
-        for drinker_name in sorted(self.db.get_drinker_names()):
-            self.layout.add_widget(DrinkerWidget(db=self.db, name=drinker_name, size_hint_y=None, height=30))
+        drinkers = []
+        for drinker_name in self.db.get_drinker_names():
+            drinkers.append(self.db.get_drinker(drinker_name))
+        drinkers.sort(key=lambda drinker_: drinker_.shown_name.split()[::-1])
+        for drinker in drinkers:
+            self.layout.add_widget(DrinkerWidget(db=self.db, drinker=drinker, size_hint_y=None, height=30))
 
     @run_in_mainthread_blocking()
     def update_drinker(self, drinker_name):
