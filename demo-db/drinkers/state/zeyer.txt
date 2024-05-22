@@ -1,5 +1,6 @@
 Drinker(
 name='zeyer',
+shown_name='Zeyer',
 credit_balance=Decimal('90.10'),
 buy_item_counts={'Beer': 1, 'Coffee': 25},
 total_buy_item_counts={'Beer': 2, 'Coffee': 26, 'Mate': 1})

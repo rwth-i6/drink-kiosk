@@ -31,6 +31,7 @@ for username in users:
     print("dn: cn=%s,ou=users" % username)
     print("cn: %s" % username)
     print("uid: %s" % username)
+    print("gecos: %s" % username.capitalize())
     print("")
     count += 1
 
