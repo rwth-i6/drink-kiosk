@@ -1,4 +1,3 @@
-
 from typing import Optional, Union, Callable, List, Dict
 import sys
 import os
@@ -24,14 +23,16 @@ class BuyItem:
 
 
 class Drinker:
-    def __init__(self, name, credit_balance=0, buy_item_counts=None, total_buy_item_counts=None):
+    def __init__(self, name, shown_name=None, credit_balance=0, buy_item_counts=None, total_buy_item_counts=None):
         """
         :param str name:
+        :param str|None shown_name:
         :param Decimal|str|int credit_balance:
         :param dict[str,int] buy_item_counts:
         :param dict[str,int] total_buy_item_counts:
         """
         self.name = name
+        self.shown_name = shown_name or name.capitalize()
         self.credit_balance = Decimal(credit_balance)
         self.buy_item_counts = buy_item_counts or {}  # type: Dict[str,int]
         self.total_buy_item_counts = total_buy_item_counts or {}  # type: Dict[str,int]
@@ -39,10 +40,11 @@ class Drinker:
             self.total_buy_item_counts = self.buy_item_counts.copy()
 
     def __repr__(self):
-        attribs = ["name", "credit_balance", "buy_item_counts", "total_buy_item_counts"]
+        attribs = ["name", "shown_name", "credit_balance", "buy_item_counts", "total_buy_item_counts"]
         return "%s(\n%s)" % (
             self.__class__.__name__,
-            ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]))
+            ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]),
+        )
 
 
 class AdminCashPosition:
@@ -73,7 +75,8 @@ class AdminCashPosition:
         attribs = ["cash_position", "purchases"]
         return "%s(\n%s)" % (
             self.__class__.__name__,
-            ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]))
+            ",\n".join(["%s=%s" % (attr, better_repr(getattr(self, attr))) for attr in attribs]),
+        )
 
     def format(self):
         """
@@ -85,9 +88,8 @@ class AdminCashPosition:
             purchases_str.append("...")
         purchases_str.extend([", ".join(map(str, purchase)) for purchase in self.purchases])
         return "".join(
-            ["purchases:\n"] +
-            ["  %s\n" % s for s in purchases_str] +
-            ["cash position: %s\n" % self.cash_position])
+            ["purchases:\n"] + ["  %s\n" % s for s in purchases_str] + ["cash position: %s\n" % self.cash_position]
+        )
 
 
 class _Task(Thread):
@@ -134,7 +136,10 @@ class _Task(Thread):
 
     def __repr__(self):
         return "<%s, wait time %.1f, delayed time %.1f>" % (
-            self.__class__.__name__, self.wait_time or 0, self.delayed_time or -1)
+            self.__class__.__name__,
+            self.wait_time or 0,
+            self.delayed_time or -1,
+        )
 
     def __hash__(self):
         return hash(id(self))
@@ -172,15 +177,15 @@ class _GitCommitBaseTask(_Task):
 class _GitCommitDrinkersTask(_GitCommitBaseTask):
     def __init__(self, **kwargs):
         super(_GitCommitDrinkersTask, self).__init__(
-            commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update",
-            **kwargs)
+            commit_files=["drinkers"], commit_msg="drink-kiosk: drinkers update", **kwargs
+        )
 
 
 class _GitCommitAdminCashTask(_GitCommitBaseTask):
     def __init__(self, **kwargs):
         super(_GitCommitAdminCashTask, self).__init__(
-            commit_files=[AdminCashPosition.DbFilePath], commit_msg="drink-kiosk: admin-cash-position",
-            **kwargs)
+            commit_files=[AdminCashPosition.DbFilePath], commit_msg="drink-kiosk: admin-cash-position", **kwargs
+        )
 
 
 class Db:
@@ -197,7 +202,8 @@ class Db:
         self.drinker_names = [
             name
             for name in self._open(self.drinkers_list_filename).read().splitlines()
-            if name and not name.startswith("#")]
+            if name and not name.startswith("#")
+        ]
         self.currency = "€"
         self.default_git_commit_wait_time = 60 * 60  # 1h
         self.buy_items = self._load_buy_items()
@@ -307,6 +313,7 @@ class Db:
         :rtype: list[str]
         """
         import glob
+
         return sorted([os.path.basename(fn).rsplit(".", 1)[0] for fn in glob.glob(self._drinker_filename("*"))])
 
     def get_buy_items(self):
@@ -350,6 +357,7 @@ class Db:
             except FileNotFoundError:
                 if not allow_non_existing:
                     from difflib import get_close_matches
+
                     close_matches = get_close_matches(name, self.get_drinker_names())
                     raise Exception("drinker %r is unknown. close matches: %r" % (name, close_matches))
                 drinker = Drinker(name=name)
@@ -360,9 +368,10 @@ class Db:
                 assert drinker.name == name
         return drinker
 
-    def _save_drinker(self, drinker):
+    def _save_drinker(self, drinker, commit=True):
         """
         :param Drinker drinker:
+        :param bool commit: whether to add a git commit task
         """
         if self.read_only:
             return
@@ -370,7 +379,8 @@ class Db:
         with self.lock:
             with self._open(drinker_fn, "w") as f:
                 f.write("%r\n" % drinker)
-            self._add_git_commit_drinkers_task()
+            if commit:
+                self._add_git_commit_drinkers_task()
 
     def get_drinkers_credit_balances_formatted(self):
         """
@@ -467,16 +477,9 @@ class Db:
                 drinker = self.get_drinker(drinker_name)
                 if drinker.credit_balance < 0:
                     raise Exception(
-                        "drinker %r has negative credit balance %s" % (drinker_name, drinker.credit_balance))
+                        "drinker %r has negative credit balance %s" % (drinker_name, drinker.credit_balance)
+                    )
                 os.remove(self._drinker_filename(drinker_name))
-
-    def _save_all_drinkers(self):
-        with self.lock:
-            # First add Git commit task, such that wait time is 0.
-            self._add_git_commit_drinkers_task(wait_time=0)
-            for name in self.get_drinker_names():
-                drinker = self.get_drinker(name, allow_non_existing=True)
-                self._save_drinker(drinker)
 
     def update_drinkers_list(self, verbose=False):
         """
@@ -492,11 +495,13 @@ class Db:
         :param bool verbose:
         """
         from pprint import pformat
+
         ldap_cmd_fn = "%s/config/ldap-opts.txt" % self.path  # example: ldapsearch -x -h <host>
         ldap_cmd = (
-            " ".
-            join([ln for ln in self._open(ldap_cmd_fn).read().splitlines() if not ln.startswith("#")]).
-            strip().split(" "))
+            " ".join([ln for ln in self._open(ldap_cmd_fn).read().splitlines() if not ln.startswith("#")])
+            .strip()
+            .split(" ")
+        )
         out = subprocess.check_output(ldap_cmd)
         lines = out.splitlines()
         drinkers_exclude_list_fn = "%s/drinkers/exclude_list.txt" % self.path
@@ -552,7 +557,7 @@ class Db:
         for line_num, line in enumerate(lines):
             last_line_was_comment = cur_line_is_comment
             assert isinstance(line, bytes)
-            if line.startswith(b'#'):
+            if line.startswith(b"#"):
                 cur_line_is_comment = True
                 continue
             cur_line_is_comment = False
@@ -566,12 +571,15 @@ class Db:
                             if verbose:
                                 pprint(cur_entry)
                             drinkers_list.append(cur_entry["uid"])
+                            drinker = self.get_drinker(cur_entry["uid"], allow_non_existing=True)
+                            drinker.shown_name = cur_entry.get("gecos", drinker.name.capitalize())
+                            self._save_drinker(drinker, commit=False)  # save. commit all at the end
                             count += 1
                 cur_entry = None
                 last_key = None
                 continue
             line = line.decode("utf8")
-            if line.startswith(' '):
+            if line.startswith(" "):
                 if last_line_was_comment:
                     cur_line_is_comment = True
                     continue
@@ -589,8 +597,12 @@ class Db:
             if key in multi_values:
                 cur_entry.setdefault(key, []).append(value)
             else:
-                assert key not in cur_entry, (
-                    "line: %r, key: %r, entry\n%s,\ncmd: %s" % (line, key, pformat(cur_entry), " ".join(ldap_cmd)))
+                assert key not in cur_entry, "line: %r, key: %r, entry\n%s,\ncmd: %s" % (
+                    line,
+                    key,
+                    pformat(cur_entry),
+                    " ".join(ldap_cmd),
+                )
                 cur_entry[key] = value
         print("Found %i users (potential drinkers)." % count)
         self.drinker_names = drinkers_list
@@ -602,7 +614,8 @@ class Db:
                 for name in drinkers_list:
                     assert "\n" not in name
                     f.write("%s\n" % name)
-            self._save_all_drinkers()
+            # Commit all drinkers now.
+            self._add_git_commit_drinkers_task(wait_time=0)
 
     def get_total_buy_item_counts(self):
         """
@@ -716,6 +729,7 @@ class HistoricDb(Db):
             raise FileNotFoundError(str(exc))
         assert isinstance(blob, self.git_mod.Blob)
         from io import TextIOWrapper, BytesIO
+
         raw_stream = BytesIO(blob.data_stream.read())
         return TextIOWrapper(raw_stream)
 
@@ -733,10 +747,12 @@ class HistoricDb(Db):
 
 def main():
     import better_exchook
+
     better_exchook.install()
     from argparse import ArgumentParser
     from pprint import pprint
     import time
+
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--path", required=True, help="path of db")
     arg_parser.add_argument("--rev")
@@ -745,9 +761,12 @@ def main():
     old_db = HistoricDb(path=args.path, git_revision=args.rev)
     print(
         "Old DB commit:",
-        old_db.git_commit.hexsha[:8], ",",
-        time.asctime(time.localtime(old_db.git_commit.authored_date)), ",",
-        old_db.git_commit.message.strip())
+        old_db.git_commit.hexsha[:8],
+        ",",
+        time.asctime(time.localtime(old_db.git_commit.authored_date)),
+        ",",
+        old_db.git_commit.message.strip(),
+    )
     cur_drinkers = set(cur_db.get_drinker_names())
     old_drinkers = set(old_db.get_drinker_names())
     print("New drinkers:", cur_drinkers.difference(old_drinkers))
@@ -760,7 +779,8 @@ def main():
     pprint(old_total_buy_item_counts)
     keys = set(cur_total_buy_item_counts.keys()).union(set(old_total_buy_item_counts.keys()))
     diff_total_buy_item_counts = {
-        key: cur_total_buy_item_counts.get(key, 0) - old_total_buy_item_counts.get(key, 0) for key in keys}
+        key: cur_total_buy_item_counts.get(key, 0) - old_total_buy_item_counts.get(key, 0) for key in keys
+    }
     print("Diff total buy items counts:")
     pprint(diff_total_buy_item_counts)
 

@@ -80,6 +80,7 @@ def kill_at_night(night_hours_range=(3, 4), min_runtime_hours=12):
         E.g. (3,4) means it will get killed only between 3AM and 4AM.
     :param int|float min_runtime_hours: it will not get killed if current runtime is less
     """
+
     def do_kill_me_now_at_night(_dt):
         print("It's late, good night.")
         sys.exit()
@@ -100,7 +101,7 @@ def kill_at_night(night_hours_range=(3, 4), min_runtime_hours=12):
                 cur_runtime += sleep_time
                 if cur_runtime > min_runtime_seconds:
                     cur_time = time.localtime()
-                    cur_time_hours = cur_time.tm_hour + cur_time.tm_min / 60. + cur_time.tm_sec / 60. / 60.
+                    cur_time_hours = cur_time.tm_hour + cur_time.tm_min / 60.0 + cur_time.tm_sec / 60.0 / 60.0
                     if night_hours_range[0] <= cur_time_hours <= night_hours_range[1]:
                         Clock.schedule_once(do_kill_me_now_at_night, 0)
 
@@ -108,38 +109,45 @@ def kill_at_night(night_hours_range=(3, 4), min_runtime_hours=12):
 
 
 class DrinkerWidget(BoxLayout):
+    """
+    Widget for a single drinker.
+    """
+
     def __init__(self, db: Db, name: str, **kwargs):
         super(DrinkerWidget, self).__init__(spacing=4, orientation="horizontal", **kwargs)
         self.db = db
         self.name = name
+        self.shown_name = name  # updated in _load
         # White background
         with self.canvas.before:
             Color(1, 1, 1, 1)
             self.rect = Rectangle(size=self.size, pos=self.pos)
-        self.add_widget(Label(text=name, color=(0, 0, 0, 1)))
+        self.name_label = Label(text=self.shown_name, color=(0, 0, 0, 1))
+        self.add_widget(self.name_label)
         self.credit_balance_label = Label(text="... %s" % self.db.currency, color=(0, 0, 0, 1))
         self.add_widget(self.credit_balance_label)
         self.drink_buttons = {}  # type: typing.Dict[str,Button]  # by drink intern name
         for drink in self.db.get_buy_items():
             # Add width=40, size_hint_x=None if fixed width.
             button = Button(text="%s ..." % drink.shown_name, font_size="12sp")
-            button.bind(
-                on_release=lambda btn, _drink=drink: self._on_drink_button_click(_drink, btn))
+            button.bind(on_release=lambda btn, _drink=drink: self._on_drink_button_click(_drink, btn))
             self.add_widget(button)
             self.drink_buttons[drink.intern_name] = button
         self.bind(size=Setter(self.rect, "size"), pos=Setter(self.rect, "pos"))
-        # in background? Thread(target=self._load, daemon=True).start()
         self._load()
 
     def _on_drink_button_click(self, drink: BuyItem, button: Button):
         print("GUI: %s asks to drink %s." % (self.name, drink.intern_name))
         popup = Popup(
-            title='Confirm: %s: Buy %s?' % (self.name, drink.shown_name),
+            title="Confirm: %s: Buy %s?" % (self.name, drink.shown_name),
             content=Button(
-                text='[size=35]%s[/size]\nwants to drink [b]%s[/b] for %s %s.' % (
-                    self.name, drink.shown_name, drink.price, self.db.currency),
-                markup=True, halign="center"),
-            size_hint=(0.7, 0.3))
+                text="[size=35]%s (%s)[/size]\nwants to drink [b]%s[/b] for %s %s."
+                % (self.shown_name, self.name, drink.shown_name, drink.price, self.db.currency),
+                markup=True,
+                halign="center",
+            ),
+            size_hint=(0.7, 0.3),
+        )
 
         class Handlers:
             confirmed = False
@@ -158,7 +166,7 @@ class DrinkerWidget(BoxLayout):
                     anim = Animation(
                         background_color=(1, 1, 1, 1),  # default background color
                         duration=60 * 5,  # seconds
-                        step=10  # seconds?
+                        step=10,  # seconds?
                     )
                     button._drink_kiosk_drink_click_fadeout_anim = anim
                 anim.start(button)
@@ -173,10 +181,12 @@ class DrinkerWidget(BoxLayout):
         popup.bind(on_dismiss=on_dismissed)
         popup.open()
 
-    @run_in_mainthread_blocking()
     def _load(self, drinker: Optional[Drinker] = None):
+        assert threading.current_thread() is threading.main_thread()
         if not drinker:
             drinker = self.db.get_drinker(self.name)
+        self.shown_name = drinker.shown_name
+        self.name_label.text = self.shown_name
         self.credit_balance_label.text = "%s %s" % (drinker.credit_balance, self.db.currency)
         drinks = self.db.get_buy_items_by_intern_name()
         for intern_drink_name, button in self.drink_buttons.items():
@@ -202,7 +212,7 @@ class DrinkersListWidget(ScrollView):
         self.db = db
         self.layout = GridLayout(cols=1, spacing=2, size_hint_y=None)
         # Make sure the height is such that there is something to scroll.
-        self.layout.bind(minimum_height=self.layout.setter('height'))
+        self.layout.bind(minimum_height=self.layout.setter("height"))
         self.add_widget(self.layout)
         self.update_all()
 
@@ -237,6 +247,7 @@ class KioskApp(App):
 
         app.root.layout.children
     """
+
     def __init__(self, db):
         """
         :param Db db:
