@@ -6,6 +6,7 @@ import argparse
 import readline
 import ast
 import typing
+import json
 from typing import Dict
 from decimal import Decimal
 from subprocess import Popen, PIPE, CalledProcessError
@@ -31,6 +32,9 @@ class Main:
             kernel_fn = os.path.normpath("%s/%s" % (main_dir, kernel_fn))
         assert os.path.exists(kernel_fn), "kernel.json not found: %s" % (kernel_fn,)
         self.kernel_fn = kernel_fn
+
+        kernel_info = json.load(open(kernel_fn))
+        print(f"Connecting to Jupiter kernel remote IP {kernel_info['ip']} port {kernel_info['shell_port']}...")
 
         # Get DB-path, mostly as a check.
         db_path = self._remote_exec("db.path")
