@@ -112,6 +112,16 @@ In our case, the default NTP servers (0.debian.pool.ntp.org etc) did not seem to
 and we had to use `services-0.informatik.rwth-aachen.de` instead.
 
 
+## Remote admin access
+
+For the tool `remote-admin.py`:
+
+It seems that `/etc/hosts` has a weird entry for the hostname (127.0.1.1).
+The IPython/Jupyter server will bind to this IP, and thus not be accessible from the network.
+Just remove this entry from `/etc/hosts`.
+Then it should bind to the correct ethernet IP for the hostname.
+
+
 ## Stability
 
 The kiosk software runs fine for 1-2 weeks or so but then becomes laggish.
