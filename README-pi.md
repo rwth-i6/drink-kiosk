@@ -122,6 +122,15 @@ Just remove this entry from `/etc/hosts`.
 Then it should bind to the correct ethernet IP for the hostname.
 
 
+## Shell environment
+
+We need UTF8 encoding support in the terminal.
+Edit `/etc/locale.gen` and uncomment the line with `en_US.UTF-8`.
+Then run `sudo locale-gen` and `sudo update-locale LANG=en_US.UTF-8`.
+Reboot.
+Check that `locale` now shows `en_US.UTF-8`.
+
+
 ## Stability
 
 The kiosk software runs fine for 1-2 weeks or so but then becomes laggish.
