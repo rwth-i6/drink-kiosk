@@ -572,7 +572,12 @@ class Db:
                                 pprint(cur_entry)
                             drinkers_list.append(cur_entry["uid"])
                             drinker = self.get_drinker(cur_entry["uid"], allow_non_existing=True)
-                            drinker.shown_name = cur_entry.get("gecos", drinker.name.capitalize())
+                            if "gecos" in cur_entry:
+                                drinker.shown_name = cur_entry["gecos"]
+                            elif "sn" in cur_entry:
+                                drinker.shown_name = cur_entry["sn"]
+                            else:
+                                drinker.shown_name = drinker.name
                             self._save_drinker(drinker, commit=False)  # save. commit all at the end
                             count += 1
                 cur_entry = None
