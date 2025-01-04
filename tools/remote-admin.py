@@ -5,6 +5,7 @@ import sys
 import argparse
 import readline
 import ast
+import time
 import typing
 import json
 from typing import Dict
@@ -32,6 +33,13 @@ class Main:
             kernel_fn = os.path.normpath("%s/%s" % (main_dir, kernel_fn))
         assert os.path.exists(kernel_fn), "kernel.json not found: %s" % (kernel_fn,)
         self.kernel_fn = kernel_fn
+
+        log_fn = os.path.dirname(kernel_fn) + "/remote-admin.log"
+        try:
+            self.log_file = open(log_fn, "a")
+        except (OSError, IOError) as exc:
+            print(f"(While opening logfile {log_fn}, got: {type(exc).__name__}: {exc})")
+            self.log_file = open("/dev/null", "w")
 
         kernel_info = json.load(open(kernel_fn))
         print(f"Connecting to Jupiter kernel remote IP {kernel_info['ip']} port {kernel_info['shell_port']}...")
@@ -267,6 +275,8 @@ class Main:
                 sys.exit(0)
             finally:
                 readline.set_completer(None)
+            self.log_file.write(f"{time_stamp()} {cmd_line}\n")
+            self.log_file.flush()
             args = cmd_line.split()
             if not cmd_line.strip() or not args:
                 continue
@@ -417,6 +427,15 @@ def run_posthook(posthook_fn, user_ns):
     if os.path.exists(posthook_fn):
         co = compile(open(posthook_fn).read(), posthook_fn, "exec")
         eval(co, user_ns)
+
+
+# Copied from utils.py, but easier to avoid import hacks.
+def time_stamp():
+    """
+    :return: current time stamp
+    :rtype: str
+    """
+    return time.strftime("%Y%m%d.%H%M%S", time.localtime())
 
 
 def _parse_drinkers_with_credit_balance(s: str) -> Dict[str, Decimal]:
