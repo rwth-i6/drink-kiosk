@@ -422,6 +422,8 @@ class Db:
             item = self._get_buy_item_by_intern_name(item_name)
             drinker.buy_item_counts.setdefault(item_name, 0)
             drinker.buy_item_counts[item_name] += amount
+            if drinker.buy_item_counts[item_name] < 0:
+                drinker.buy_item_counts[item_name] = 0  # it's only for visual feedback; this makes more sense
             drinker.total_buy_item_counts.setdefault(item_name, 0)
             drinker.total_buy_item_counts[item_name] += amount
             drinker.credit_balance -= item.price * amount
