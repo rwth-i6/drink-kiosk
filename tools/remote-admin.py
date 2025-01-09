@@ -20,8 +20,13 @@ def main_func():
     arg_parser = argparse.ArgumentParser(description="Attach remotely to main app, and run admin commands.")
     arg_parser.add_argument("--kernel", default="kernel.json", help="IPython/Jupyter kernel.json from main app")
     args = arg_parser.parse_args()
-    main = Main(kernel_fn=args.kernel)
-    main.run()
+    while True:
+        try:
+            main = Main(kernel_fn=args.kernel)
+            main.run()
+        except _RestartKiosk:
+            continue
+        break
 
 
 class Main:
@@ -97,6 +102,8 @@ class Main:
             "drinker_delete_inactive_non_neg_balance": Cmd(
                 [], self.drinker_delete_inactive_non_neg_balance,
                 "Delete inactive users with non-negative balance. Shows list first and asks for confirmation."),
+            "reload": Cmd([], self.reload, "Reload/Refresh the list of active users."),
+            "restart_kiosk": Cmd([], self.restart_kiosk, "Restart the kiosk."),
             "help": Cmd([], self.help),
             "exit": Cmd([], self.exit)}
         self.readline_completer = ReadlineCompleter(main=self, prompt="Command: ")
@@ -245,6 +252,14 @@ class Main:
             return
         self._remote_exec("db.drinkers_delete(%r)" % (drinkers,))
         print("Deleted.")
+
+    def reload(self):
+        self._remote_exec("reload()")
+
+    def restart_kiosk(self):
+        self._remote_exec("exit()")
+        print("The remote admin interface will also restart now.")
+        raise _RestartKiosk()
 
     def help(self):
         print("Available commands:")
@@ -445,6 +460,10 @@ def _parse_drinkers_with_credit_balance(s: str) -> Dict[str, Decimal]:
         credit_balance = Decimal(credit_balance_str)
         out[drinker_name] = credit_balance
     return out
+
+
+class _RestartKiosk(Exception):
+    pass
 
 
 if __name__ == '__main__':

@@ -59,7 +59,7 @@ def main():
     app = KioskApp(db=db)
     db.update_drinker_callbacks.append(app.reload)
     init_ipython_kernel(
-        user_ns={"db": db, "app": app, "reload": reload},
+        user_ns={"db": db, "app": app, "reload": reload, "exit": sys.exit},
         config_path="%s/config" % db.path,
         debug_connection_filename=args.debug)
     try:
