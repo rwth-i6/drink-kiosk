@@ -21,10 +21,21 @@ def main_func():
     arg_parser.add_argument("--kernel", default="kernel.json", help="IPython/Jupyter kernel.json from main app")
     args = arg_parser.parse_args()
     while True:
+        main = Main(kernel_fn=args.kernel)
         try:
-            main = Main(kernel_fn=args.kernel)
             main.run()
         except _RestartKiosk:
+            print("Wait a moment for the kiosk to quit...")
+            time.sleep(10)
+            print("Waiting for kiosk to start again...")
+            start_wait_time = time.monotonic()
+            timeout = 60
+            while not os.path.exists(main.kernel_fn):
+                time.sleep(0.2)
+                if time.monotonic() - start_wait_time > timeout:
+                    print(f"Timeout, waited more than {timeout} seconds.")
+                    sys.exit(1)
+            assert os.path.exists(main.kernel_fn)
             continue
         break
 
@@ -257,7 +268,7 @@ class Main:
         self._remote_exec("reload()")
 
     def restart_kiosk(self):
-        self._remote_exec("exit()")
+        self._remote_exec("exit_()")
         print("The remote admin interface will also restart now.")
         raise _RestartKiosk()
 

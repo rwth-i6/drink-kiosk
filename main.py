@@ -22,6 +22,12 @@ def reload():
     app.reload()
 
 
+def exit_async():
+    import _thread
+
+    _thread.interrupt_main()
+
+
 def main():
     global app, db
     arg_parser = argparse.ArgumentParser()
@@ -59,7 +65,7 @@ def main():
     app = KioskApp(db=db)
     db.update_drinker_callbacks.append(app.reload)
     init_ipython_kernel(
-        user_ns={"db": db, "app": app, "reload": reload, "exit": sys.exit},
+        user_ns={"db": db, "app": app, "reload": reload, "exit_": exit_async},
         config_path="%s/config" % db.path,
         debug_connection_filename=args.debug)
     try:
