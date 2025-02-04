@@ -124,12 +124,19 @@ class DrinkerWidget(BoxLayout):
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.name_label = Label(text=self.drinker.shown_name, color=(0, 0, 0, 1))
         self.add_widget(self.name_label)
-        self.credit_balance_label = Label(text="... %s" % self.db.currency, color=(0, 0, 0, 1))
+        # Use width=..., size_hint_x=None for fixed width.
+        self.credit_balance_label = Label(text="-XX.XX %s" % self.db.currency, color=(0, 0, 0, 1), size_hint_x=None)
+        self.credit_balance_label.texture_update()  # to know the size of the text (texture_size)
+        self.credit_balance_label.width = self.credit_balance_label.texture_size[0] + 2  # text size + padding
         self.add_widget(self.credit_balance_label)
         self.drink_buttons = {}  # type: typing.Dict[str,Button]  # by drink intern name
         for drink in self.db.get_buy_items():
-            # Add width=40, size_hint_x=None if fixed width.
-            button = Button(text="%s ..." % drink.shown_name, font_size="12sp")
+            txt = "%s (%s %s): %s" % (drink.shown_name, drink.price, self.db.currency, "XXX")
+            button = Button(text=txt, font_size="12sp")
+            button.texture_update()  # to know the size of the text (texture_size)
+            # Use width=..., size_hint_x=None for fixed width.
+            button.size_hint_x = None
+            button.width = button.texture_size[0] + 2  # text size + padding
             button.bind(on_release=lambda btn, _drink=drink: self._on_drink_button_click(_drink, btn))
             self.add_widget(button)
             self.drink_buttons[drink.intern_name] = button
