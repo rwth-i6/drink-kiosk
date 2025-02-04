@@ -148,7 +148,7 @@ class DrinkerWidget(BoxLayout):
         popup = Popup(
             title="Confirm: %s: Buy %s?" % (self.name, drink.shown_name),
             content=Button(
-                text="[size=35]%s (%s)[/size]\nwants to drink [b]%s[/b] for %s %s."
+                text="[size=35]%s\n(%s)[/size]\n\nwants to drink [b]%s[/b] for %s %s."
                 % (self.drinker.shown_name, self.name, drink.shown_name, drink.price, self.db.currency),
                 markup=True,
                 halign="center",
