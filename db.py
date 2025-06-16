@@ -13,8 +13,9 @@ import time
 class BuyItem:
     def __init__(self, intern_name, shown_name, price):
         """
-        :param str intern_name:
-        :param str shown_name:
+        :param str intern_name: used for the counters of the drinkers in the DB.
+            I.e. maybe relevant for statistics on drinking, but otherwise not relevant.
+        :param str shown_name: shown in the GUI
         :param Decimal|str|float|int price:
         """
         self.intern_name = intern_name
