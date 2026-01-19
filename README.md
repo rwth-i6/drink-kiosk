@@ -45,7 +45,15 @@ The update is done at every startup of the app.
 (We restart the app every night.)
 
 The drinkers list update will not delete any drinkers from the DB.
+
 In case some drinker has been added previously, but is not in the active drinker list anymore,
 the user will not be shown in the GUI, but the user will still be in the DB.
-To remove any inactive drinkers, use `tools/remote-admin.py`
+
+User in DB <=> File for user exists in `db/drinkers/state/`.
+
+User active <=> User shown in GUI <=> User listed in `db/drinkers/list.txt`.
+
+To remove any inactive drinkers with non-negative balance, use `tools/remote-admin.py`
 and the `drinker_delete_inactive_non_neg_balance` command.
+
+To remove other inactive drinkers, just delete their files in `db/drinkers/state/`.
