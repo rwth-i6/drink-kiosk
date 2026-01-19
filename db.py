@@ -556,7 +556,6 @@ class Db:
         drinkers_list = []  # type: List[str]
         last_key = None
         cur_line_is_comment, last_line_was_comment = False, False
-        count = 0
         for line_num, line in enumerate(lines):
             last_line_was_comment = cur_line_is_comment
             assert isinstance(line, bytes)
@@ -582,7 +581,6 @@ class Db:
                             else:
                                 drinker.shown_name = drinker.name
                             self._save_drinker(drinker, commit=False)  # save. commit all at the end
-                            count += 1
                 cur_entry = None
                 last_key = None
                 continue
@@ -612,8 +610,8 @@ class Db:
                     " ".join(ldap_cmd),
                 )
                 cur_entry[key] = value
-        print("Found %i users (potential drinkers)." % count)
-        self.drinker_names = drinkers_list
+        print("Found %i users (active drinkers)." % len(drinkers_list))
+        self.drinker_names = drinkers_list  # active drinkers
         with self.lock:
             with self._open(self.drinkers_list_filename, "w") as f:
                 f.write("# AUTO-GENERATED FILE by drink-kiosk\n")
