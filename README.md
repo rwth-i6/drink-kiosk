@@ -57,3 +57,6 @@ To remove any inactive drinkers with non-negative balance, use `tools/remote-adm
 and the `drinker_delete_inactive_non_neg_balance` command.
 
 To remove other inactive drinkers, just delete their files in `db/drinkers/state/`.
+
+To control whether a drinker is active or not, this is determined currently via LDAP,
+and can be configured via `db/config/ldap-opts.txt` and `db/config/ldap_attrib_filter.txt`.
